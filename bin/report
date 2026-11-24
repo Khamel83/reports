@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# report publish <repo> <slug> <file.html>   (see README.md)
+set -euo pipefail
+[ "${1:-}" = publish ] && [ $# -eq 4 ] || { echo "usage: report publish <repo> <slug> <file.html>" >&2; exit 2; }
+repo=$2 slug=$3 file=$4
+[[ $repo =~ ^[a-z0-9][a-z0-9._-]*$ && $slug =~ ^[a-z0-9][a-z0-9-]*$ ]] || { echo "repo and slug: lowercase letters, digits, - . _" >&2; exit 2; }
+: "${REPORTS_CONTENT_DIR:?}" "${REPORTS_PROJECT:?}" "${CLOUDFLARE_API_TOKEN:?}" "${CLOUDFLARE_ACCOUNT_ID:?}"
+grep -q 'href="/_/tokens.css"' "$file" || { echo "report must link /_/tokens.css" >&2; exit 2; }
+here=$(cd "$(dirname "$0")/.." && pwd)
+dest="$REPORTS_CONTENT_DIR/$repo/$slug"; mkdir -p "$dest" "$REPORTS_CONTENT_DIR/_"
+cp "$file" "$dest/index.html"; cp "$here/tokens.css" "$REPORTS_CONTENT_DIR/_/tokens.css"
+git -C "$REPORTS_CONTENT_DIR" add -A && git -C "$REPORTS_CONTENT_DIR" commit -qm "report: $repo/$slug" || true
+git -C "$REPORTS_CONTENT_DIR" push -q origin HEAD || echo "warning: content backup push failed" >&2
+DO_NOT_TRACK=1 PAGECAST_TELEMETRY=0 npx --yes pagecast@0.7.0 pages deploy "$REPORTS_CONTENT_DIR" --project "$REPORTS_PROJECT" --json >/dev/null
+echo "published: /$repo/$slug/"
