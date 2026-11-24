@@ -1,0 +1,119 @@
+#!/usr/bin/env python3
+"""Turn a finished task's markdown result into a report page, publish it, reply in the Slack thread.
+
+stdin : JSON {identifier, title, ticket_url, transcript_id, result_markdown}
+stdout: last line JSON {url, slack_ts, slack}
+env   : REPORTS_CONTENT_DIR REPORTS_PROJECT CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID (see bin/report)
+        REPORTS_HOST (default reports.khamel.com)  REPORTS_REPO (default factory)
+        SLACK_BOT_TOKEN, REPORTS_SLACK_CHANNEL  (optional: thread reply under "Voice memo <id> ·")
+        --dry-run <out.html> renders only.
+"""
+import html
+import json
+import os
+import re
+import subprocess
+import sys
+import tempfile
+import urllib.parse
+import urllib.request
+
+import markdown
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+
+
+def slugify(text, limit=56):
+    text = re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
+    return (text[:limit].rstrip("-")) or "report"
+
+
+def render(payload):
+    source = payload["result_markdown"].replace("&", "&amp;").replace("<", "&lt;")
+    body = markdown.markdown(source, extensions=["tables", "sane_lists", "fenced_code"])
+    body = re.sub(r'href="(?!https?://|mailto:|#)[^"]*"', 'href="#"', body)
+    title = payload.get("title") or "Report"
+    match = re.match(r"\s*<h1>(.*?)</h1>\s*", body, re.S)
+    if match:
+        title_html, body = match.group(1), body[match.end():]
+    else:
+        title_html = html.escape(title)
+    lede = ""
+    match = re.match(r"\s*<p>(.*?)</p>\s*", body, re.S)
+    if match and len(re.sub(r"<[^>]+>", "", match.group(1))) < 400:
+        lede, body = match.group(1), body[match.end():]
+    ident = html.escape(payload.get("identifier", ""))
+    ticket = payload.get("ticket_url", "")
+    ticket_link = f' · <a href="{html.escape(ticket)}">Factory ticket</a>' if ticket.startswith("https://") else ""
+    plain = re.sub(r"<[^>]+>", "", title_html)
+    repo = os.environ.get("REPORTS_REPO", "factory")
+    page = f"""<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{html.escape(html.unescape(plain))}</title>
+<meta name="report:repo" content="{html.escape(repo)}"><meta name="report:ticket" content="{ident}">
+<link rel="stylesheet" href="/_/tokens.css">
+</head><body><main>
+<p class="kicker">{html.escape(repo)} · {ident}</p>
+<h1>{title_html}</h1>
+{f'<p class="lede">{lede}</p>' if lede else ''}
+{body}
+<div class="meta">Written by a Factory agent{ticket_link}. Anything marked not verified was not confirmed.</div>
+</main></body></html>
+"""
+    return plain, page
+
+
+def slack(method, token, **fields):
+    request = urllib.request.Request("https://slack.com/api/" + method, data=urllib.parse.urlencode(fields).encode(),
+                                     headers={"Authorization": "Bearer " + token})
+    return json.load(urllib.request.urlopen(request, timeout=20))
+
+
+def thread_reply(transcript_id, url, plain_title):
+    token, channel = os.environ.get("SLACK_BOT_TOKEN"), os.environ.get("REPORTS_SLACK_CHANNEL")
+    if not token or not channel:
+        return None, "disabled"
+    marker, cursor, parent = f"Voice memo {transcript_id} ·", "", None
+    for _ in range(3):
+        page = slack("conversations.history", token, channel=channel, limit=200, **({"cursor": cursor} if cursor else {}))
+        if not page.get("ok"):
+            return None, "slack_error:" + str(page.get("error"))
+        parent = next((m for m in page["messages"] if (m.get("text") or "").startswith(marker)), None)
+        cursor = (page.get("response_metadata") or {}).get("next_cursor", "")
+        if parent or not cursor:
+            break
+    if not parent:
+        return None, "parent_not_found"
+    replies = slack("conversations.replies", token, channel=channel, ts=parent["ts"])
+    for message in replies.get("messages", []):
+        if url in (message.get("text") or ""):
+            return message["ts"], "exists"
+    text = f"*Result: {plain_title}*\nReport (Google login): {url}"
+    posted = slack("chat.postMessage", token, channel=channel, thread_ts=parent["ts"], text=text, unfurl_links="false")
+    return (posted.get("ts"), "posted") if posted.get("ok") else (None, "slack_error:" + str(posted.get("error")))
+
+
+def main():
+    payload = json.load(sys.stdin)
+    plain, page = render(payload)
+    if "--dry-run" in sys.argv:
+        open(sys.argv[sys.argv.index("--dry-run") + 1], "w").write(page)
+        return
+    repo = os.environ.get("REPORTS_REPO", "factory")
+    slug = slugify(plain) + "-" + slugify(payload.get("identifier", ""), 16)
+    handle = tempfile.NamedTemporaryFile("w", suffix=".html", delete=False)
+    handle.write(page)
+    handle.close()
+    path = handle.name
+    try:
+        subprocess.run([os.path.join(HERE, "report"), "publish", repo, slug, path], check=True,
+                       stdout=sys.stderr, timeout=200)
+    finally:
+        os.unlink(path)
+    url = f"https://{os.environ.get('REPORTS_HOST', 'reports.khamel.com')}/{repo}/{slug}/"
+    ts, status = thread_reply(payload["transcript_id"], url, html.unescape(plain))
+    print(json.dumps(dict(url=url, slack_ts=ts, slack=status)))
+
+
+if __name__ == "__main__":
+    main()
