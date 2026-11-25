@@ -15,7 +15,7 @@ Public on purpose: this repo holds the rules, the look and the tools. It holds *
 - **Metadata:** the `<meta name="report:*">` tags in the template: `kind` (one lowercase word: `report`, `plan`,
   `research`, `review`, `status`), `repo`, `ticket`, `created`.
 - **Dashboard:** `https://<host>/` lists every page, newest first, by day; `/_/by-repo/` lists them by repo. Each row
-  shows kind, repo, title, link and last publish time. `bin/report-index` writes both pages at each publish.
+  shows kind, repo, title, link and the time of its last change (a publish of identical HTML keeps the date). `bin/report-index` writes both pages at each publish.
 - **Honesty:** mark anything you did not verify. Say what you could not find.
 - **Access:** the host must be behind an access gate. Reports hold personal facts.
 

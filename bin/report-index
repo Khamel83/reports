@@ -5,7 +5,8 @@ usage: report-index <content-dir>
 env  : REPORTS_HOST (default reports.khamel.com)
 
 Kind and title come from each page's <meta name="report:kind"> and <title>; the repo is the folder name.
-The date is the last publish: the page's last commit in the content repo, or now when it is not committed yet.
+The date is the page's last change: its last commit in the content repo, or now when this publish changes it.
+A publish of identical HTML is not a change and keeps the date, by design.
 """
 import html
 import os
@@ -22,7 +23,7 @@ NAME = re.compile(r"[a-z0-9][a-z0-9._-]*\Z")  # the names bin/report accepts; an
 VIEWS = {"day": ("/", "index.html"), "repo": ("/_/by-repo/", os.path.join("_", "by-repo", "index.html"))}
 
 
-def publish_times(root):
+def change_times(root):
     """Path -> author time of its last commit; uncommitted paths get now. Empty when root is not a git repo.
 
     Author time, so a restyle of old pages can keep their dates with `git commit --date`.
@@ -47,7 +48,7 @@ def publish_times(root):
 
 
 def collect(root):
-    times, rows = publish_times(root), []
+    times, rows = change_times(root), []
     for repo in sorted(os.listdir(root)):
         if not NAME.match(repo) or not os.path.isdir(os.path.join(root, repo)):
             continue
@@ -72,7 +73,7 @@ def clock(when):
 
 
 def listing(rows):
-    """One row per page: kind, repo, title over its full link, last publish time."""
+    """One row per page: kind, repo, title over its full link, time of last change."""
     host = html.escape(HOST)
     items = "".join(
         f'<li><span class="tag">{html.escape(r["kind"])}</span><span>{html.escape(r["repo"])}</span>'
@@ -105,10 +106,10 @@ def render(view, rows):
 <div class="stats">
 <div class="stat"><b>{len(rows)}</b>pages</div>
 <div class="stat"><b>{len({r["repo"] for r in rows})}</b>repos</div>
-<div class="stat"><b>{latest}</b>latest publish</div>
+<div class="stat"><b>{latest}</b>latest change</div>
 </div>
 </header>
-{sections}<footer class="meta">Made by <code>bin/report-index</code> at each publish. Times are the last publish of each page, Pacific time.</footer>
+{sections}<footer class="meta">Made by <code>bin/report-index</code> at each publish. Times are the last change of each page, Pacific time.</footer>
 </main></body></html>
 """
 
