@@ -5,11 +5,18 @@ Public on purpose: this repo holds the rules, the look and the tools. It holds *
 
 ## The standard
 
+- **Scope:** everything the owner is meant to read is a report: results, plans, research, reviews, comparisons,
+  status pages. Give the owner the full `https://` link. Never give a relative path such as `docs/plan.md`: it does
+  not say which repo it is in and it does not open on a phone.
 - **URL:** `https://<host>/<repo>/<slug>/` — `<repo>` is the project that produced it, `<slug>` is short and readable
   (`ioniq-5-vs-6-vs-egolf`); use a ticket or date when no good name exists.
 - **File:** one self-contained `index.html` per report at `<repo>/<slug>/index.html`. No external scripts or images.
 - **Look:** link `/_/tokens.css` (from `tokens.css` here) and start from `template/report.html`. Read `DESIGN.md`.
-- **Metadata:** the `<meta name="report:*">` tags in the template (repo, ticket, created).
+- **Metadata:** the `<meta name="report:*">` tags in the template: `kind` (one lowercase word: `report`, `plan`,
+  `research`, `review`, `status`), `repo`, `ticket`, `created`.
+- **Dashboard:** `https://<host>/` lists every page, newest first, by day; `/_/by-repo/` lists them by repo. Each row
+  shows kind, repo, title, link and the time of its last change (a publish of identical HTML keeps the date).
+  `bin/report-index` writes both pages at each publish.
 - **Honesty:** mark anything you did not verify. Say what you could not find.
 - **Access:** the host must be behind an access gate. Reports hold personal facts.
 

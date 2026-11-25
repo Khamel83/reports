@@ -1,12 +1,24 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{{TITLE}}</title>
-<meta name="report:repo" content="{{REPO}}"><meta name="report:ticket" content="{{TICKET}}"><meta name="report:created" content="{{DATE}}">
+<meta name="report:kind" content="{{KIND}}"><meta name="report:repo" content="{{REPO}}"><meta name="report:ticket" content="{{TICKET}}"><meta name="report:created" content="{{DATE}}">
 <link rel="stylesheet" href="/_/tokens.css">
 </head><body><main>
-<p class="kicker">{{REPO}} · {{TICKET}}</p>
+<header class="hero">
+<p class="kicker">{{REPO}} · {{TICKET}} · {{DATE}}</p>
 <h1>{{TITLE}}</h1>
 <p class="lede">{{ONE_SENTENCE_ANSWER}}</p>
-<!-- Body: use h2, .card, .card.verdict, table, .tag(.good/.warn/.bad), .note. No external scripts or images. -->
-<div class="meta">Written by {{AGENT}} on {{DATE}}. Unverified items are marked.</div>
+<div class="stats"><!-- 2 to 4 numbers that carry the answer; delete the block if the report has none -->
+<div class="stat"><b>{{NUMBER}}</b>{{WHAT_IT_COUNTS}}</div>
+</div>
+</header>
+<section>
+<div class="card verdict"><strong>{{RECOMMENDATION}}</strong><p>{{WHY_IN_TWO_SENTENCES}}</p></div>
+</section>
+<section>
+<h2>{{SECTION_TITLE}}</h2>
+<!-- One <section> for each h2. Pick the part that fits the content (DESIGN.md): .grid of .card, .card.ask,
+     table, .steps, progress, .flow, .timeline, .tag, .note. No external scripts, fonts or images. -->
+</section>
+<footer class="meta">Written by {{AGENT}} on {{DATE}}. Unverified items are marked.</footer>
 </main></body></html>

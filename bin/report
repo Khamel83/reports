@@ -9,6 +9,7 @@ grep -q 'href="/_/tokens.css"' "$file" || { echo "report must link /_/tokens.css
 here=$(cd "$(dirname "$0")/.." && pwd)
 dest="$REPORTS_CONTENT_DIR/$repo/$slug"; mkdir -p "$dest" "$REPORTS_CONTENT_DIR/_"
 cp "$file" "$dest/index.html"; cp "$here/tokens.css" "$REPORTS_CONTENT_DIR/_/tokens.css"
+"$here/bin/report-index" "$REPORTS_CONTENT_DIR"  # dashboard at / and /_/by-repo/
 git -C "$REPORTS_CONTENT_DIR" add -A && git -C "$REPORTS_CONTENT_DIR" commit -qm "report: $repo/$slug" || true
 git -C "$REPORTS_CONTENT_DIR" push -q origin HEAD || echo "warning: content backup push failed" >&2
 cd "$REPORTS_CONTENT_DIR"  # Pagecast writes .pagecast/ into the current directory

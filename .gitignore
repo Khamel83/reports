@@ -1,3 +1,4 @@
 .pagecast/
 .env
 *.encrypted
+__pycache__/
