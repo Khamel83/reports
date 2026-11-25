@@ -20,5 +20,5 @@
 
 - [x] Design v2, dashboard, `report:kind`, plans as reports: https://github.com/Khamel83/reports/pull/6, live
       Nov 24, 2026, 8:32 PM PT, accepted by the owner.
-- [x] Shared agent rule for report links: https://github.com/Khamel83/infra/pull/2421 (merged).
+- [x] Shared agent rule for report links (in Infra, merged).
 
