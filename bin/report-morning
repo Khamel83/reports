@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Morning report: one page for all the bed reports of one night.
 
-usage: report-morning build <content-dir> <date> <out.html>   exit 3 if there are no bed reports
+usage: report-morning build <content-dir> <date> <out.html>   exit 2 bad arguments, 3 no bed reports, 4 lock busy
 
 A bed report is the page <repo>/bed-<date>[-<topic>]/index.html with <meta name="report:kind" content="bed">.
 <date> is the date of the morning the owner reads it (see the bed skill). Its <meta name="bed:status"> is
