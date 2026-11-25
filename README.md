@@ -47,7 +47,7 @@ script. `bin/report` adds the box to every page at each publish (`bin/report-rep
 
 The form posts to `/_/reply`. The reply Worker (`worker/reply.js`) saves the reply as one JSON item
 (`schema` `reports.reply.v1`, `reply_id`, `repo`, `slug`, `page_url`, `ticket`, `title`, `choice`, `text`, `sent_at`,
-`sender`) in the owner's inbox with client name `reports`, then shows a "sent" page. `reply_id` is a hash of page,
+`sender`) in the owner's inbox with client name `reports`, then shows a "sent" page (its link carries an HMAC of the inbox receipt, so only a saved reply shows "Reply sent"). `reply_id` is a hash of page,
 choice and text, so the same reply sent twice counts once. Factory's inbox intake opens one Factory task for each reply. When the
 inbox does not confirm it, the page says "Not confirmed" and shows the text again. The host's access gate covers
 `/_/reply` too; the Worker refuses a post without the gate's identity header or from another site. Deploy: `bin/reply-deploy` (settings in its header, from the environment).

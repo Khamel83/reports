@@ -4,7 +4,8 @@
 // capture, client "reports") and answers 303 to the "sent" page, so a browser refresh does not send it twice.
 // The reply id is a hash of page, choice and text; Factory keys on the same hash, so a resend is one task.
 // Factory's intake reads new inbox items and opens one task for each reply.
-// GET ?sent=<id>&back=<path>: the "sent" page.
+// GET ?sent=<id>&sig=<hmac>&back=<path>: the "sent" page. sig is an HMAC of the inbox receipt with the Worker
+// secret, so only a real 303 after a saved reply can show "Reply sent"; a typed or crafted link cannot.
 //
 // Cloudflare Access protects the whole host, so every request here comes from the owner's signed-in browser.
 // env.DROP: service binding to the inbox Worker. env.DROP_INTAKE_TOKEN: its intake token (a Worker secret).
@@ -19,6 +20,14 @@ export async function replyId(repo, slug, choice, text) {
   const bytes = new TextEncoder().encode(JSON.stringify([repo, slug, choice, text]));
   const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
   return Array.from(digest.slice(0, 16), (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+// HMAC-SHA256(secret, receipt id), first 16 bytes as hex.
+export async function sign(secret, id) {
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" },
+    false, ["sign"]);
+  const mac = new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(id)));
+  return Array.from(mac.slice(0, 16), (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 export function buildReply(form, { host, sender, now, id }) {
@@ -63,9 +72,12 @@ export default {
     if (url.pathname !== "/_/reply") return new Response("Not found", { status: 404 });
     if (request.method === "GET") {
       const sent = url.searchParams.get("sent");
-      if (!ID.test(sent || "")) return page(400, "No reply here", "Use the reply box at the end of a report.", "/");
+      const sig = url.searchParams.get("sig") || "";
+      if (!ID.test(sent || "") || !env.DROP_INTAKE_TOKEN || sig !== await sign(env.DROP_INTAKE_TOKEN, sent)) {
+        return page(400, "No reply here", "Use the reply box at the end of a report.", "/");
+      }
       const who = request.headers.get("Cf-Access-Authenticated-User-Email");
-      return page(200, "Reply sent", `Saved as ${sent}. Factory reads new replies every 5 minutes.` +
+      return page(200, "Reply sent", `The inbox saved it as ${sent}. Factory reads it on its next inbox pass.` +
         (who ? ` Signed in as ${who}.` : ""),
         backPath(url.searchParams.get("back")));
     }
@@ -117,7 +129,8 @@ export default {
     if (!receipt) {
       return page(502, "Not confirmed", "The inbox did not confirm the reply. Send it again: the same reply counts once.", back, text);
     }
-    const next = `/_/reply?sent=${encodeURIComponent(receipt)}&back=${encodeURIComponent(back)}`;
+    const sig = await sign(env.DROP_INTAKE_TOKEN, receipt);
+    const next = `/_/reply?sent=${encodeURIComponent(receipt)}&sig=${sig}&back=${encodeURIComponent(back)}`;
     return new Response(null, { status: 303, headers: { Location: next, "Cache-Control": "no-store" } });
   },
 };

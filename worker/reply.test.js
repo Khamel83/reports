@@ -1,7 +1,7 @@
 // node --test worker/
 import assert from "node:assert/strict";
 import test from "node:test";
-import worker, { buildReply } from "./reply.js";
+import worker, { buildReply, sign } from "./reply.js";
 
 const HOST = "reports.example";
 
@@ -32,7 +32,8 @@ test("a reply is saved once as one inbox item and the browser goes to the sent p
   const { calls, env } = inbox({ ok: true, drop_id: "0b6f-11aa" });
   const response = await worker.fetch(post({ ...page, choice: "B", text: "Do R-4." }), env);
   assert.equal(response.status, 303);
-  assert.equal(response.headers.get("Location"), "/_/reply?sent=0b6f-11aa&back=%2Finfra%2Fa2ui-check%2F");
+  const sig = await sign("intake-test", "0b6f-11aa");
+  assert.equal(response.headers.get("Location"), `/_/reply?sent=0b6f-11aa&sig=${sig}&back=%2Finfra%2Fa2ui-check%2F`);
   assert.equal(calls.length, 1);
   assert.equal(new URL(calls[0].url).pathname, "/ingest/drop");
   const headers = calls[0].init.headers;
@@ -84,13 +85,26 @@ test("empty, too long or pageless replies are refused before the inbox", async (
 });
 
 test("the sent page links only back to a report path", async () => {
-  const good = await worker.fetch(new Request(`https://${HOST}/_/reply?sent=abc-1&back=%2Finfra%2Fx%2F`), {});
+  const env = { DROP_INTAKE_TOKEN: "intake-test" };
+  const sig = await sign("intake-test", "abc-1");
+  const good = await worker.fetch(new Request(`https://${HOST}/_/reply?sent=abc-1&sig=${sig}&back=%2Finfra%2Fx%2F`), env);
   assert.equal(good.status, 200);
   assert.match(await good.text(), /href="\/infra\/x\/"/);
-  const evil = await worker.fetch(new Request(`https://${HOST}/_/reply?sent=abc-1&back=https%3A%2F%2Fevil.example%2F`), {});
+  const evil = await worker.fetch(new Request(`https://${HOST}/_/reply?sent=abc-1&sig=${sig}&back=https%3A%2F%2Fevil.example%2F`), env);
   assert.match(await evil.text(), /href="\/"/);
-  assert.equal((await worker.fetch(new Request(`https://${HOST}/_/reply?sent=%3Cx%3E`), {})).status, 400);
+  assert.equal((await worker.fetch(new Request(`https://${HOST}/_/reply?sent=%3Cx%3E`), env)).status, 400);
   assert.equal((await worker.fetch(new Request(`https://${HOST}/other`), {})).status, 404);
+});
+
+test("a sent link without a valid signature shows no success", async () => {
+  const env = { DROP_INTAKE_TOKEN: "intake-test" };
+  for (const query of ["sent=abc-1", "sent=abc-1&sig=00", `sent=abc-2&sig=${await sign("intake-test", "abc-1")}`]) {
+    const response = await worker.fetch(new Request(`https://${HOST}/_/reply?${query}`), env);
+    assert.equal(response.status, 400);
+    assert.doesNotMatch(await response.text(), /Reply sent/);
+  }
+  const unset = await worker.fetch(new Request(`https://${HOST}/_/reply?sent=abc-1&sig=${await sign("intake-test", "abc-1")}`), {});
+  assert.equal(unset.status, 400);
 });
 
 test("buildReply keeps the sender and the time", () => {

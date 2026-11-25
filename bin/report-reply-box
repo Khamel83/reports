@@ -36,7 +36,7 @@ def box(page, repo, slug):
                       for c in choices)
     return (f'{START}\n<section class="reply" id="reply">\n<h2>Reply</h2>\n'
             f'<form method="post" action="/_/reply">{hidden}\n'
-            '<label for="reply-text">Your answer, decision or change. Factory gets it within 5 minutes.</label>\n'
+            '<label for="reply-text">Your answer, decision or change. The next page says if the inbox saved it.</label>\n'
             '<textarea id="reply-text" name="text" rows="4" maxlength="4000"></textarea>\n'
             f'<div class="actions">{buttons}<button class="btn" name="choice" value="">Send</button></div>\n'
             f'</form>\n</section>\n{END}\n')
