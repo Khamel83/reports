@@ -15,6 +15,18 @@ Checkpoint: Nov 24, 2026, 8:50 PM PT. Host, deploy path and credential location 
 
 ## In flight
 
+- R-4 reply box (#10, stacked on #9). Live from the branch since Nov 24, 2026, about 10:15 PM PT: all pages have the
+  box; Worker `reports-reply` on `/_/reply*` (version `8d559f84`), Access gate checked (no login: 302).
+  **Paused on purpose:** the Worker's inbox secret is removed, so a reply answers "Not sent" and shows the text again.
+  Reason: the installed Factory intake moves its cursor past `reports` items, so a reply sent now would be lost.
+  Trigger: factory#648 deployed on Homelab. Restore: run `bin/reply-deploy` from this branch with the env in its
+  header (token: Infra `secrets/reports-reply-worker.env.encrypted`, infra#2426; intake token:
+  `DROP_INGRESS_TOKEN` in Infra `secrets/drop-archive.env.encrypted`; service `drop-ingress`). Then the owner presses
+  "Works" on `/reports/r4-reply-box/`; check one Factory task with the page link. Decide by Nov 27, 2026.
+  Also open: dispatch#215 (Dispatch skips `reports`). Known effect: the first R-4 publish put the box in a "report"
+  commit, so five older pages show Nov 24 10:00 PM PT on the dashboard (a force-push to fix it was refused; same day,
+  so no grouping change). `bin/report` now adds the box in the "restyle" commit.
+
 - #9 waits for the reviewer bot. After the merge: `git checkout main && git pull --ff-only`, delete the branch.
 - The shared rule from infra#2421 was not in `~/.agents/shared-rules.md` on the Mac at 8:50 PM PT. Infra's rules
   sync installs it. Check: `grep -c "report link" ~/.agents/shared-rules.md` (expect 1).
