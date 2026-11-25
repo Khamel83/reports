@@ -1,5 +1,5 @@
 <!-- janitor:begin:todo -->
-- No explicit open TODO items are established by the supplied published evidence. Commit summaries describe past activity, not open tasks.
+- Open items are in "Open" below (R-1 to R-6); this block adds none.
 <!-- janitor:end:todo -->
 
 ## Open
@@ -16,7 +16,8 @@
 ## Done
 
 - [x] R-7 Version the stylesheet link at publish: https://github.com/Khamel83/reports/pull/9. Done in effect: live from the
-      branch since Nov 24, 2026, 8:39 PM PT (content commit `fe5ec7f`). The merge of #9 only moves the source to main.
+      branch since Nov 24, 2026, 8:39 PM PT (content commit `fe5ec7f`). Merge and deploy are separate: the
+      merge makes this source what the next `bin/report` publish runs from main.
 
 - [x] Design v2, dashboard, `report:kind`, plans as reports: https://github.com/Khamel83/reports/pull/6, live
       Nov 24, 2026, 8:32 PM PT, accepted by the owner.
