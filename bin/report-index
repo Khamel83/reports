@@ -1,0 +1,120 @@
+#!/usr/bin/env python3
+"""Write the dashboard: <content>/index.html (by day) and <content>/_/by-repo/index.html (by repo).
+
+usage: report-index <content-dir>
+env  : REPORTS_HOST (default reports.khamel.com)
+
+Kind and title come from each page's <meta name="report:kind"> and <title>; the repo is the folder name.
+The date is the last publish: the page's last commit in the content repo, or now when it is not committed yet.
+"""
+import html
+import os
+import re
+import subprocess
+import sys
+import time
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
+PT = ZoneInfo("America/Los_Angeles")
+HOST = os.environ.get("REPORTS_HOST", "reports.khamel.com")
+VIEWS = {"day": ("/", "index.html"), "repo": ("/_/by-repo/", os.path.join("_", "by-repo", "index.html"))}
+
+
+def publish_times(root):
+    """Path -> unix time of its last commit; uncommitted paths get now. Empty when root is not a git repo."""
+    def git(*args):
+        return subprocess.run(["git", "-C", root, *args], capture_output=True, text=True, check=True).stdout
+    times, stamp = {}, None
+    try:
+        for line in git("log", "--format=@%ct", "--name-only").splitlines():
+            if line.startswith("@"):
+                stamp = int(line[1:])
+            elif line:
+                times.setdefault(line, stamp)
+        for line in git("status", "--porcelain", "--untracked-files=all").splitlines():
+            times[line[3:]] = int(time.time())
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return {}
+    return times
+
+
+def collect(root):
+    times, rows = publish_times(root), []
+    for repo in sorted(os.listdir(root)):
+        if repo[0] in "._" or not os.path.isdir(os.path.join(root, repo)):
+            continue
+        for slug in sorted(os.listdir(os.path.join(root, repo))):
+            rel = f"{repo}/{slug}/index.html"
+            path = os.path.join(root, rel)
+            if not os.path.isfile(path):
+                continue
+            page = open(path, encoding="utf-8").read()
+            title = re.search(r"<title>(.*?)</title>", page, re.S)
+            kind = re.search(r'<meta name="report:kind" content="([^"]*)"', page)
+            rows.append(dict(
+                repo=repo, path=f"/{repo}/{slug}/",
+                title=html.unescape(title.group(1)).strip() if title else slug,
+                kind=(html.unescape(kind.group(1)).strip().lower() if kind else "") or "report",
+                when=datetime.fromtimestamp(times.get(rel) or os.path.getmtime(path), PT)))
+    return sorted(rows, key=lambda row: row["when"], reverse=True)
+
+
+def clock(when):
+    return when.strftime("%b %-d, %-I:%M %p PT")
+
+
+def listing(rows):
+    """One row per page: kind, repo, title over its full link, last publish time."""
+    items = "".join(
+        f'<li><span class="tag">{html.escape(r["kind"])}</span><span>{html.escape(r["repo"])}</span>'
+        f'<span><a href="{r["path"]}">{html.escape(r["title"])}</a>'
+        f'<small><a href="https://{HOST}{r["path"]}">{HOST}{r["path"]}</a></small></span>'
+        f'<time datetime="{r["when"].isoformat()}">{clock(r["when"])}</time></li>\n'
+        for r in rows)
+    return f'<ul class="rows">\n{items}</ul>'
+
+
+def render(view, rows):
+    groups = {}
+    for row in rows:  # rows are newest first, so groups and their rows are too
+        key = row["when"].strftime("%A, %B %-d, %Y") if view == "day" else row["repo"]
+        groups.setdefault(key, []).append(row)
+    sections = "".join(f"<section>\n<h2>{html.escape(key)}</h2>\n{listing(group)}\n</section>\n"
+                       for key, group in groups.items())
+    switch = " · ".join(f"<strong>by {name}</strong>" if name == view else f'<a href="{VIEWS[name][0]}">by {name}</a>'
+                        for name in VIEWS)
+    latest = rows[0]["when"].strftime("%b %-d") if rows else "none"
+    return f"""<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Reports</title>
+<link rel="stylesheet" href="/_/tokens.css">
+</head><body><main>
+<header class="hero">
+<p class="kicker">{html.escape(HOST)}</p>
+<h1>Reports</h1>
+<p class="lede">Everything the agents published for you to read, newest first. View: {switch}.</p>
+<div class="stats">
+<div class="stat"><b>{len(rows)}</b>pages</div>
+<div class="stat"><b>{len({r["repo"] for r in rows})}</b>repos</div>
+<div class="stat"><b>{latest}</b>latest publish</div>
+</div>
+</header>
+{sections}<footer class="meta">Made by <code>bin/report-index</code> at each publish. Times are the last publish of each page, Pacific time.</footer>
+</main></body></html>
+"""
+
+
+def main():
+    root = sys.argv[1]
+    rows = collect(root)
+    for view, (_, target) in VIEWS.items():
+        path = os.path.join(root, target)
+        os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+        with open(path, "w", encoding="utf-8") as handle:
+            handle.write(render(view, rows))
+    print(f"dashboard: {len(rows)} pages", file=sys.stderr)
+
+
+if __name__ == "__main__":
+    main()

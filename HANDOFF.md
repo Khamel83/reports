@@ -6,6 +6,8 @@ vault `secrets/reports-cloudflare.env.encrypted`. The `report` skill on the Mac 
 Nov 24, 2026, design v2: `tokens.css` is dark first with full-width bands; `DESIGN.md` lists the parts (hero, stats,
 cards, ask, steps, flow, timeline); `template/report.html` and `bin/report-from-task` write `header.hero` plus one
 `section` for each `h2`. Pages link the shared `/_/tokens.css`, so every page takes the new look when it deploys.
+Dashboard: `bin/report` runs `bin/report-index` at each publish. It writes `/` (by day) and `/_/by-repo/` (by repo)
+from each page's `report:kind` meta tag, folder, `<title>` and last commit time in the content repo.
 Recheck: serve the content repo locally, open a page in headless Chrome with `--force-dark-mode` at 1440 px and in a
 390 px iframe.
 

@@ -30,10 +30,11 @@ Sections get alternate band colours automatically. Start from `template/report.h
 | Tracker | `<ol class="steps"><li class="done">Name <span>Done</span></li>…` (`.done`, `.now`, none) | Stages of one job |
 | Flow | `<div class="flow"><div><h3>…</h3><p>…</p></div>…</div>` | 2 to 4 boxes joined in order |
 | Timeline | `<ol class="timeline"><li class="done"><b>M0</b><h3>…</h3><p>…</p></li>…` | Milestones or dates in a row |
+| Rows | `<ul class="rows"><li><span class="tag">plan</span><span>repo</span><span><a href="…">Title</a><small>full link</small></span><time>Nov 24</time></li>…` | A list of links with a label, a source and a date |
 | Caveat | `<p class="note">` | Limits of the evidence |
 | Footer | `<footer class="meta">` | Author, date, sources, what is unverified |
 
-A plan is a report. Put `plan` in the kicker, the goal in the `.lede`, the steps in `.steps` or `.timeline`,
+A plan is a report. Put `plan` in the `report:kind` meta tag and the kicker, the goal in the `.lede`, the steps in `.steps` or `.timeline`,
 and each decision the owner must make in a `.card.ask`.
 
 Write order: answer first, then evidence, then what to do next. Short sentences. No filler.

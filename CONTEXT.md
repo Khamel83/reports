@@ -10,3 +10,6 @@
 - Nov 24, 2026: reports are dark first and use the band layout in `DESIGN.md` (wide bands, heavy condensed capitals,
   stat tiles, cards). The owner reads in dark mode only. The old narrow warm-paper column is retired.
 - Nov 24, 2026: everything the owner is meant to read, plans included, goes out as a report link. No relative paths.
+  The same rule is in the shared agent rules (Khamel83/infra#2421, merged) and in the `report` skill on the Mac.
+- Nov 24, 2026: `reports.khamel.com/` is a dashboard of all pages, newest first, by day or by repo, with kind, repo,
+  title, link and date for each page.
