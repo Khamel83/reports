@@ -22,8 +22,11 @@ Checkpoint: Nov 25, 2026, 5:54 AM PT. Host and deploy path are in `INFRA.md`; th
   are installed on the Mac and described in the skill, not here. The reports checkout on the Mac is on `main`; keep
   it there, because the job and every publish run from it. The Nov 25 5:00 AM PT run hung (a hard link hung on the
   Mac's project disk, for every program); I stopped it and published `/morning/` by hand at 5:54 AM PT. The job now
-  avoids hard links and stops after 30 minutes. The owner must restart the Mac (or reconnect the disk) to clear the
-  hang; the report asks him. Next check: the Nov 26 5:00 AM PT run (log ends with "live:", not "TIMEOUT").
+  avoids hard links and stops after 45 minutes. The owner must restart the Mac (or reconnect the disk) to clear the
+  hang; the report asks him. Nov 25: owner asked for a combined analysis, not a list; the job now sends all bed
+  reports to G2K (`bin/report-morning prompt`, then `build --analysis`); a launchd test call to G2K worked. The Nov 25
+  page was written by hand in that form. Next check: the Nov 26 5:00 AM PT run (log has "analysis:" and ends with
+  "live:", not "TIMEOUT").
 
 - R-4 reply box (#10). **Live and verified:** Worker `reports-reply` has its inbox secret since Nov 24,
   2026, 10:50 PM PT (deployed from this branch), after the Factory intake change for `reports` items and the Dispatch

@@ -29,6 +29,10 @@ Deployed runtime state is not verified by this remote evidence.
   range: from one minute up to about 33 hours), end
   with a bed report. At 5 AM PT all bed reports of the night become one morning report. Owner decision, same
   night: no #inbox message; the newest morning report is at `/morning/` and at the top of the dashboard. The morning job runs on the Mac, because the publish credential is there only (R-2).
+- Nov 25, 2026 (owner): the morning report is one combined analysis, not a list of the bed reports. Each session
+  reports only its own work; the morning report thinks across them (one chain under several reports, duplicate work,
+  conflicts, facts that do not agree, one list of owner actions), also when projects work on the same thing without
+  knowing it.
 - Nov 24, 2026, 11:06 PM PT (bed): land all four open PRs (#7, #9, #10, #11). A branch with a push in the last hour
   belongs to its own session; leave it. The reply Worker (#10) does not check the Access token itself: Access
   guards the path (rule 8, no extra security inside the moat).

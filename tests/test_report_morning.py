@@ -2,6 +2,7 @@
 import fcntl
 import importlib.machinery
 import importlib.util
+from html.parser import HTMLParser
 import os
 import shutil
 import subprocess
@@ -124,6 +125,102 @@ class Build(unittest.TestCase):
         self.assertEqual(when.hour, 1)
 
 
+class Analysis(unittest.TestCase):
+    def test_prompt_has_each_report_text_without_the_reply_box(self):
+        root = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, root, True)
+        for repo in ("alpha", "beta"):
+            os.makedirs(os.path.join(root, repo, "bed-2026-11-25"))
+            with open(os.path.join(root, repo, "bed-2026-11-25", "index.html"), "w") as handle:
+                handle.write("<html><head><title>T</title><style>x{}</style></head><body>"
+                             + page(lede=f"{repo} fixed the release tests.") +
+                             '<div class="reply"><form><textarea>reply here</textarea></form></div></body></html>')
+        text = rm.prompt(rm.collect(root, "2026-11-25"), "2026-11-25")
+        self.assertIn("Overlaps", text)
+        self.assertIn("===== Report /alpha/bed-2026-11-25/", text)
+        self.assertIn("beta fixed the release tests.", text)
+        self.assertNotIn("reply here", text)
+        self.assertNotIn("x{}", text)
+
+    def test_clean_keeps_only_safe_parts(self):
+        out = rm.clean('```html\n<section onclick="x()"><h2>Story</h2><script>alert(1)</script>'
+                       '<div class="card evil ask"><h3>Do <img src=x onerror=y>it</h3></div>'
+                       '<a href="javascript:x()">bad</a><a href="//evil.example/">bad2</a>'
+                       '<a href="https://github.com/Khamel83/g2k/pull/1">ok</a><a href="/g2k/bed-2026-11-25/">r</a>'
+                       '<p>1 < 2 & <b>open</p>\n```')
+        self.assertNotIn("script", out)
+        self.assertNotIn("alert", out)
+        self.assertNotIn("onclick", out)
+        self.assertNotIn("img", out)
+        self.assertNotIn("evil", out)
+        self.assertNotIn("javascript", out)
+        self.assertNotIn("```", out)
+        self.assertIn('<div class="card ask"><h3>Do it</h3></div>', out)
+        self.assertIn('<a href="https://github.com/Khamel83/g2k/pull/1">ok</a>', out)
+        self.assertIn('<a href="/g2k/bed-2026-11-25/">r</a>', out)
+        self.assertIn("<a>bad2</a>", out)
+        for href in ("/\\evil.example/", "https://x/\\y", "/a b", "/&#92;evil.example/", "/\x01/evil.example/",
+                     "/a\x7fb", "HTTPS://x/", " /x"):
+            self.assertEqual(rm.clean(f'<h2>h</h2><a href="{href}">x</a>'), "<section><h2>h</h2><a>x</a></section>")
+        self.assertEqual(rm.clean('<script><a href="/r/">in</a></script><h2>after</h2>'),
+                         "<section><h2>after</h2></section>")
+        self.assertIn("1 &lt; 2 &amp; <b>open</b></p>", out)
+        self.assertTrue(out.endswith("</section>"))
+        self.assertEqual(rm.clean("Error: no provider answered"), "")
+        self.assertEqual(rm.clean("## Story\n- a *b*"), "")
+        nested = rm.clean('<div class="card verdict"><p>V<section><h2>S</h2></section>')
+        self.assertEqual(nested, '<section><div class="card verdict"><p>V</p></div></section>'
+                                 '<section><h2>S</h2></section>')
+        loose = rm.clean('<section><h2>A</h2></section>\n<p>loose</p> text <section><h2>B</h2></section>')
+        self.assertEqual(loose, '<section><h2>A</h2></section>\n<section><p>loose</p> text </section>'
+                                '<section><h2>B</h2></section>')
+        self.assertEqual(rm.clean('<h2>A</h2></div></section></p><p>x</p>'),   # stray end tags stay balanced
+                         '<section><h2>A</h2></section><section><p>x</p></section>')
+
+    def test_render_with_analysis_and_without(self):
+        rows = [dict(repo="alpha", path="/alpha/bed-2026-11-25/", title="T", lede="L", status="done", stats=[],
+                     asks=["Pick a name"], unread=0, when=rm.datetime(2026, 11, 25, 1, tzinfo=rm.PT))]
+        with_it = rm.render(rows, "2026-11-25", analysis=rm.clean(
+            '<div class="card verdict"><strong>V</strong></div><section><h2>Overlaps</h2></section>'))
+        self.assertIn('<section><div class="card verdict"><strong>V</strong></div></section>'
+                      '<section><h2>Overlaps</h2></section>', with_it)
+        self.assertIn("<h2>Overlaps</h2>", with_it)
+        self.assertIn("alpha: Pick a name", with_it)   # the plain ask list always stays
+        self.assertIn("Asks in each report", with_it)
+        self.assertIn("one model's reading of all 1 bed reports", with_it)
+        failed = rm.render(rows, "2026-11-25", analysis="")
+        self.assertIn("No combined analysis this morning", failed)
+        self.assertIn("alpha: Pick a name", failed)
+        self.assertNotIn("No combined analysis", rm.render(rows, "2026-11-25"))
+
+
+    def test_messy_analysis_gives_balanced_top_level_bands(self):
+        class Tree(HTMLParser):
+            def __init__(self):
+                super().__init__()
+                self.stack, self.errors, self.parents = [], [], set()
+
+            def handle_starttag(self, tag, attrs):
+                if tag not in ("meta", "link", "br"):
+                    if tag == "section":
+                        self.parents.add(self.stack[-1] if self.stack else None)
+                    self.stack.append(tag)
+
+            def handle_endtag(self, tag):
+                if self.stack and self.stack[-1] == tag:
+                    self.stack.pop()
+                else:
+                    self.errors.append(tag)
+
+        rows = [dict(repo="alpha", path="/alpha/bed-2026-11-25/", title="T", lede="L", status="done", stats=[],
+                     asks=["Pick a name"], unread=0, when=rm.datetime(2026, 11, 25, 1, tzinfo=rm.PT))]
+        analysis = rm.clean('<div class="card verdict"><strong>V</strong><ul><li>x<section><h2>S</h2><div><p>y'
+                            '</section>loose text<div>z</p></li>')
+        tree = Tree()
+        tree.feed(rm.render(rows, "2026-11-25", analysis=analysis))
+        self.assertEqual((tree.errors, tree.stack, tree.parents), ([], [], {"main"}))
+
+
 class Cli(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.mkdtemp()
@@ -144,6 +241,28 @@ class Cli(unittest.TestCase):
             handle.write(page())
         self.assertEqual(self.run_build("build", self.root, "2026-11-25", self.out), 0)
         self.assertTrue(os.path.getsize(self.out))
+        missing = os.path.join(self.root, "none.html")
+        self.assertEqual(self.run_build("build", self.root, "2026-11-25", self.out, "--analysis", missing), 0)
+        self.assertIn("No combined analysis", open(self.out).read())
+        self.assertEqual(self.run_build("prompt", self.root, "2026-11-25"), 0)
+        self.assertEqual(self.run_build("prompt", self.root, "2026-11-25", self.out), 2)
+
+    def test_ask_cards_stay_whatever_the_model_file_holds(self):
+        os.makedirs(os.path.join(self.root, ".git"))
+        os.makedirs(os.path.join(self.root, "alpha", "bed-2026-11-25"))
+        with open(os.path.join(self.root, "alpha", "bed-2026-11-25", "index.html"), "w") as handle:
+            handle.write(page(asks=["Restart the Mac"]))
+        answer = os.path.join(self.root, "answer.html")
+        for body, failed in (("Error: provider timeout after 300 s", True), ("## Story\n- **a**", True),
+                             ("<p>partial", True), ("", True),
+                             ('<div class="card verdict"><strong>V</strong></div><section><h2>S</h2></section>', False)):
+            with open(answer, "w") as handle:
+                handle.write(body)
+            self.assertEqual(self.run_build("build", self.root, "2026-11-25", self.out, "--analysis", answer), 0)
+            out = open(self.out).read()
+            self.assertIn('<div class="card ask"><h3>alpha: Restart the Mac</h3>', out, body)
+            self.assertEqual("No combined analysis" in out, failed, body)
+            self.assertNotIn("provider timeout", out)
 
     def test_busy_lock_gives_up_with_4(self):
         os.makedirs(os.path.join(self.root, ".git"))

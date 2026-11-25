@@ -1,7 +1,13 @@
 #!/usr/bin/env python3
 """Morning report: one page for all the bed reports of one night.
 
-usage: report-morning build <content-dir> <date> <out.html>   exit 2 bad arguments, 3 no bed reports, 4 lock busy or missing
+usage: report-morning build <content-dir> <date> <out.html> [--analysis <file>]
+       report-morning prompt <content-dir> <date>
+exit 2 bad arguments, 3 no bed reports, 4 lock busy or missing
+
+`prompt` prints the full text of every bed report of that date and the instructions for one combined analysis
+(what happened across projects, overlaps, disagreements, owner decisions). The caller sends it to a model and gives
+the answer to `build --analysis`; only a small set of tags and the stylesheet's classes are kept from it.
 
 A bed report is the page <repo>/bed-<date>[-<topic>]/index.html with <meta name="report:kind" content="bed">.
 <date> is the date of the morning the owner reads it (see the bed skill). Its <meta name="bed:status"> is
@@ -9,6 +15,7 @@ done, working or blocked. Each `.card.ask` h3 is one thing the owner must do.
 """
 import fcntl
 import html
+from html.parser import HTMLParser
 import os
 import re
 import subprocess
@@ -50,6 +57,15 @@ def changed(root, rel):
     return datetime.fromtimestamp(stamp or os.path.getmtime(os.path.join(root, rel)), PT)
 
 
+def page_text(page):
+    """Readable text of a whole report page: no head, scripts, styles or reply box; one line for each block."""
+    page = re.sub(r"(?is)<head>.*?</head>|<(script|style|form)\b.*?</\1>", " ", page)
+    page = re.sub(r'(?is)<div class="reply\b.*?</form>\s*</div>', " ", page)
+    page = re.sub(r"(?i)</(p|li|h[1-6]|div|tr|section|header|footer)>|<br\s*/?>", "\n", page)
+    lines = (" ".join(html.unescape(re.sub(r"<[^>]+>", " ", line)).split()) for line in page.split("\n"))
+    return "\n".join(line for line in lines if line)
+
+
 def collect(root, date, skipped=None):
     """Bed reports of that date. Bed-dated pages that are not read go to `skipped` as (path, reason)."""
     rows, skipped = [], skipped if skipped is not None else []
@@ -88,7 +104,7 @@ def collect(root, date, skipped=None):
                 title=text(title.group(1)) if title else slug,
                 lede=text(lede.group(1)) if lede else "",
                 status=status if status in STATUS_TAG else "unknown",
-                stats=stats, asks=asks, unread=unread,
+                stats=stats, asks=asks, unread=unread, text=page_text(page),
                 when=changed(root, rel)))
     return rows
 
@@ -98,7 +114,114 @@ def counts(rows):
     return by, sum(len(r["asks"]) for r in rows)
 
 
-def render(rows, date, skipped=()):
+PROMPT = """You get the bed reports of one night. Each one is written by a separate agent session that worked alone on
+one project while the owner slept. Each session saw only its own work. Read all of them together and write the
+owner's one morning report: think across the projects, as the owner would if he had time to read everything.
+
+Find and say:
+1. The real story of the night across projects, in time order, when several sessions worked on one chain of causes.
+2. Overlaps: two sessions that did the same work, fixed the same fault, or studied the same cause, without knowing it.
+3. Conflicts and new risks: a change in one project that affects another, or facts that do not agree between reports
+   (times, counts, causes). Say which report says what.
+4. One list of owner actions and decisions, without repeats (merge the same ask from several reports). Mark each one
+   as an action or as optional with its default.
+5. Open items and who owns them; items that nobody owns.
+Use only facts in the reports. Name the source report for each claim. Do not invent links. If nothing overlaps, say so.
+Keep it short: the owner reads it on a phone. At most 10 timeline items; join small events. No part longer than needed.
+
+Write in ASD-STE100 Simplified Technical English: short sentences, active voice. Times in Pacific time (PT).
+Output only HTML, no Markdown and no code fence. Start with
+<div class="card verdict"><strong>one-sentence verdict for the owner</strong><p>why, in two sentences</p></div>
+then one <section> for each part, each with an <h2>. Allowed tags: section h2 h3 p ul ol li div span strong b em small
+code a time. Allowed classes: card ask verdict grid steps timeline rows tag good warn bad note done now.
+For owner items use <div class="card ask"><h3>short action</h3><p>why, default</p></div>. For a list of findings use
+<div class="grid"> with <div class="card"><h3>title <span class="tag warn">overlap</span></h3><p>...</p></div>.
+Links: only https:// links that appear in the reports, or the report paths given below.
+"""
+
+
+def prompt(rows, date):
+    parts = [PROMPT, f"Night: the morning of {date}. {len(rows)} bed reports.\n"]
+    for r in rows:
+        parts.append(f"===== Report {r['path']} (project {r['repo']}, status {r['status']}, "
+                     f"last change {r['when'].strftime('%b %-d, %-I:%M %p PT')})\n{r['text']}\n")
+    return "\n".join(parts)
+
+
+ALLOWED_TAGS = {"section", "h2", "h3", "p", "ul", "ol", "li", "div", "span", "strong", "b", "em", "small", "code",
+                "a", "time"}
+ALLOWED_CLASSES = {"card", "ask", "verdict", "grid", "steps", "timeline", "rows", "tag", "good", "warn", "bad", "note",
+                   "done", "now"}
+
+
+class Clean(HTMLParser):
+    """Keeps only ALLOWED_TAGS, known classes and safe links from model output; text is escaped again."""
+
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.out, self.open, self.skip = [], [], 0
+
+    def handle_starttag(self, tag, attrs):
+        if tag in ("script", "style", "head", "title"):
+            self.skip += 1
+            return
+        if self.skip or tag not in ALLOWED_TAGS:
+            return
+        keep = ""
+        attrs = dict(attrs)
+        classes = [c for c in (attrs.get("class") or "").split() if c in ALLOWED_CLASSES]
+        if classes:
+            keep += f' class="{" ".join(classes)}"'
+        href = attrs.get("href") or ""
+        # No backslash, space or control character anywhere: a browser reads "/\host" as "//host" (another site).
+        if tag == "a" and re.match(r"(https://|/(?![/\\]))[^\s\"'<>\\\x00-\x1f\x7f]*\Z", href):
+            keep += f' href="{html.escape(href)}"'
+        if tag == "section":  # a section is always top level: each one is a page band directly under <main>
+            while self.open:
+                self.out.append(f"</{self.open.pop()}>")
+        else:
+            self.band()
+        self.out.append(f"<{tag}{keep}>")
+        self.open.append(tag)
+
+    def handle_endtag(self, tag):
+        if tag in ("script", "style", "head", "title"):
+            self.skip = max(0, self.skip - 1)
+            return
+        if not self.skip and tag in self.open:
+            while self.open:
+                last = self.open.pop()
+                self.out.append(f"</{last}>")
+                if last == tag:
+                    break
+
+    def band(self):
+        """Content outside any element (a verdict card, loose text) goes in its own section, so all of it is a band."""
+        if not self.open:
+            self.out.append("<section>")
+            self.open.append("section")
+
+    def handle_data(self, data):
+        if not self.skip:
+            if data.strip():
+                self.band()
+            self.out.append(html.escape(data, quote=False))
+
+    def result(self):
+        return "".join(self.out) + "".join(f"</{t}>" for t in reversed(self.open))
+
+
+def clean(fragment):
+    fragment = re.sub(r"^\s*```[a-z]*\s*|\s*```\s*$", "", fragment)
+    parser = Clean()
+    parser.feed(fragment)
+    parser.close()
+    out = parser.result().strip()
+    # Text with no heading and no verdict (an error message, Markdown) is not an analysis: the page says it failed.
+    return out if re.search(r'<h2>|<div class="card verdict">', out) else ""
+
+
+def render(rows, date, skipped=(), analysis=None):
     e = html.escape
     by, asks = counts(rows)
     day = datetime.strptime(date, "%Y-%m-%d").strftime("%A, %B %-d")
@@ -119,7 +242,16 @@ def render(rows, date, skipped=()):
                if unread else "")
     warning += "".join(f'<p class="note">Not read: <a href="{e(path)}">{e(path)}</a> ({e(why)}). '
                        f'It is not in the counts above.</p>\n' for path, why in skipped)
-    needs = (f'<section>\n<h2>Needs you</h2>\n{warning}{ask_cards}</section>\n' if ask_cards or warning else "")
+    needs = (f'<section>\n<h2>{"Asks in each report" if analysis else "Needs you"}</h2>\n{warning}{ask_cards}</section>\n'
+             if ask_cards or warning else "")
+    if analysis:  # clean() output: every part is already a top-level <section>
+        analysis_block = (f'{analysis}\n<section>\n<p class="note">The parts above are one model\'s reading of all '
+                          f'{len(rows)} bed reports together; check a claim in its report before you act on it.</p>\n</section>\n')
+    elif analysis is None:
+        analysis_block = ""
+    else:
+        analysis_block = ('<section>\n<p class="note">No combined analysis this morning (the model call failed or gave '
+                          'nothing). Each report is below; see the bed skill to run it again.</p>\n</section>\n')
     return f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>While you slept: {e(day)}</title>
@@ -137,12 +269,12 @@ def render(rows, date, skipped=()):
 <div class="stat"><b>{asks}</b>need you</div>
 </div>
 </header>
-{needs}<section>
-<h2>Projects</h2>
+{analysis_block}{needs}<section>
+<h2>Each project</h2>
 <div class="grid">
 {cards}</div>
 </section>
-<footer class="meta">Made by <code>bin/report-morning</code> from the bed reports for {e(day)}. Each card repeats its report's own
+<footer class="meta">Made by <code>bin/report-morning</code> from the bed reports for {e(day)}. Each project card repeats its report's own
 summary at the time of this build (5 AM PT); open the report for the evidence and for any later change. A status is
 what the session wrote last, not a check by this page.</footer>
 </main></body></html>
@@ -158,7 +290,16 @@ def real_date(value):
 
 def main():
     args = sys.argv[1:]
-    if len(args) == 4 and args[0] == "build" and real_date(args[2]):
+    analysis = None
+    if len(args) == 6 and args[0] == "build" and args[4] == "--analysis":
+        try:
+            with open(args[5], encoding="utf-8", errors="replace") as handle:
+                analysis = clean(handle.read())
+        except OSError:
+            analysis = ""
+        args = args[:4]
+    if len(args) in (3, 4) and args[0] in ("build", "prompt") and len(args) == (4 if args[0] == "build" else 3) \
+            and real_date(args[2]):
         # Read under bin/report's publish lock, so a publish that fails and resets the tree is never half-read.
         try:
             lock = open(os.path.join(args[1], ".git", "report-publish.lock"), "a")
@@ -180,10 +321,13 @@ def main():
         if not rows and not skipped:
             print(f"no bed reports for {args[2]}", file=sys.stderr)
             sys.exit(3)
+        if args[0] == "prompt":
+            sys.stdout.write(prompt(rows, args[2]))
+            return
         with open(args[3], "w", encoding="utf-8") as handle:
-            handle.write(render(rows, args[2], skipped))
+            handle.write(render(rows, args[2], skipped, analysis))
     else:
-        print(__doc__.split("\n\n")[1], file=sys.stderr)
+        print(__doc__.split("\n\n")[1] + "\n\n" + __doc__.split("\n\n")[2], file=sys.stderr)
         sys.exit(2)
 
 

@@ -46,8 +46,14 @@ questions first, then works alone and publishes a bed report at `<repo>/bed-<dat
 for a second one in the same repo that night), where `<date>` is the date of the next 5 AM. A bed report has `report:kind` `bed`, a `<meta name="bed:status">` of `done`, `working` or
 `blocked`, a `.lede`, `.stats` and one `.card.ask` for each thing the owner must do.
 
-At 5:00 AM PT, `bin/report-morning build <content-dir> <date> <out.html>` collects all bed reports of that date into
-one page, `reports/morning-<date>/`. `bin/report-index` copies the newest morning report to `/morning/` and puts a
+At 5:00 AM PT the morning job makes one page, `reports/morning-<date>/`, that thinks across all bed reports of that
+date. Each bed report sees only its own project; the morning report finds what they do not see: one chain of causes
+under several reports, two sessions that did the same work, a change in one project that affects another, facts that
+do not agree, and one merged list of owner actions. `bin/report-morning prompt <content-dir> <date>` prints the full
+text of every bed report with those instructions. The job sends it as one tool-free request through G2K
+(`g2k-review`) and gives the answer to `bin/report-morning build <content-dir> <date> <out.html> --analysis <file>`,
+which keeps only a small set of tags, the stylesheet's classes and safe links, and adds one card for each project.
+If the model call fails, the page still goes out with a note and the project cards. `bin/report-index` copies the newest morning report to `/morning/` and puts a
 link to it at the top of the dashboard. No bed reports: no page. The morning page is a snapshot at 5 AM. A session still working then is in it with
 status `working` (each session publishes its first bed report when it starts), and its card links to the live bed
 report; changes after 5 AM show only there. A session that starts after 5 AM has the next day's date, so it is in the
