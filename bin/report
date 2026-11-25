@@ -5,7 +5,7 @@ set -euo pipefail
 repo=$2 slug=$3 file=$4
 [[ $repo =~ ^[a-z0-9][a-z0-9._-]*$ && $slug =~ ^[a-z0-9][a-z0-9-]*$ ]] || { echo "repo and slug: lowercase letters, digits, - . _" >&2; exit 2; }
 : "${REPORTS_CONTENT_DIR:?}" "${REPORTS_PROJECT:?}" "${CLOUDFLARE_API_TOKEN:?}" "${CLOUDFLARE_ACCOUNT_ID:?}"
-grep -q 'href="/_/tokens.css"' "$file" || { echo "report must link /_/tokens.css" >&2; exit 2; }
+grep -qE 'href="/_/tokens\.css(\?v=[0-9a-z]+)?"' "$file" || { echo "report must link /_/tokens.css" >&2; exit 2; }
 here=$(cd "$(dirname "$0")/.." && pwd)
 dest="$REPORTS_CONTENT_DIR/$repo/$slug"; mkdir -p "$dest" "$REPORTS_CONTENT_DIR/_"
 # Browsers keep /_/tokens.css for hours (the host sends max-age=14400), so every page links it with a version.
