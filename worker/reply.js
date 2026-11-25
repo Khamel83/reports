@@ -13,6 +13,7 @@
 const NAME = /^[a-z0-9][a-z0-9._-]{0,63}$/;
 const SLUG = /^[a-z0-9][a-z0-9-]{0,127}$/;
 const ID = /^[A-Za-z0-9-]{1,80}$/;
+export const INBOX_WAIT_MS = 10000;
 const LIMITS = { text: 4000, choice: 80, ticket: 64, title: 200 };
 
 // One reply = one id: the same page, choice and text give the same id, so a double click or a retry is one reply.
@@ -131,6 +132,7 @@ export default {
           "X-Filename": `reply-${reply.repo}-${reply.slug}.json`,
         },
         body: JSON.stringify(reply),
+        signal: AbortSignal.timeout(INBOX_WAIT_MS),  // a stalled inbox gives "Not confirmed", not an open request
       });
       const result = await response.json();
       if (response.ok && result && result.ok && ID.test(result.drop_id || "")) receipt = result.drop_id;

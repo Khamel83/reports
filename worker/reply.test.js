@@ -129,3 +129,13 @@ test("without the intake secret nothing goes to the inbox", async () => {
   assert.equal(response.status, 503);
   assert.equal(calls.length, 0);
 });
+
+test("a stalled inbox ends in not confirmed with the text back", async () => {
+  const env = {
+    DROP_INTAKE_TOKEN: "intake-test",
+    DROP: { fetch: (url, init) => new Promise((_, reject) => init.signal.addEventListener("abort", () => reject(init.signal.reason))) },
+  };
+  const response = await worker.fetch(post({ ...page, text: "still there" }), env);
+  assert.equal(response.status, 502);
+  assert.match(await response.text(), /still there/);
+});
