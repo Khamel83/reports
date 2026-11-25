@@ -54,4 +54,6 @@ inbox does not confirm it, the page says "Not confirmed" and shows the text agai
 
 ## Rules for this repo
 
-Never commit a token, a key, a report, a vault path, or a private hostname/ID (tailnet or provider-default addresses). CI fails a commit that does (`scripts/check.sh`).
+Never commit a token, a key, a report, a vault path, a stored credential's name, or a private hostname/ID (tailnet or
+provider-default addresses). CI fails a commit that does (`scripts/check.sh`); environment variable names such as
+`CLOUDFLARE_API_TOKEN` are the interface and stay.
