@@ -12,9 +12,11 @@
       deploy, the Factory intake change and the Dispatch exclusion (see HANDOFF.md).
 - [ ] R-5 Slack thread link for every report that answers a voice note.
 - [ ] R-6 Look at light mode and at a real phone after design v2 (the owner uses dark mode; tokens only).
-- [ ] R-7 Version the stylesheet link at publish: https://github.com/Khamel83/reports/pull/9 (live from the branch).
 
 ## Done
+
+- [x] R-7 Version the stylesheet link at publish: https://github.com/Khamel83/reports/pull/9. Live from the branch
+      since Nov 24, 2026, 8:39 PM PT (content commit `fe5ec7f`); the merge of #9 closes it.
 
 - [x] Design v2, dashboard, `report:kind`, plans as reports: https://github.com/Khamel83/reports/pull/6, live
       Nov 24, 2026, 8:32 PM PT, accepted by the owner.
