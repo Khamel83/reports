@@ -8,12 +8,13 @@
 - [ ] R-2 Agents on Homelab and OCI can publish a report or plan directly (the `report` skill is on the Mac only).
 - [ ] R-3 Pages from the visual-explainer plugin publish in this design (they do not link `/_/tokens.css`, so
       `bin/report` refuses them).
-- [ ] R-4 Reply box on each page, with a Worker that sends the reply to the agent. Box and Worker are live
-      (Nov 24, 2026, 10:50 PM PT); done when one real reply makes one Factory task (see HANDOFF.md).
 - [ ] R-5 Slack thread link for every report that answers a voice note.
 - [ ] R-6 Look at light mode and at a real phone after design v2 (the owner uses dark mode; tokens only).
 
 ## Done
+
+- [x] R-4 Reply box on each page, with a Worker that sends the reply to the agent: this PR. Live Nov 24, 2026, 10:50 PM
+      PT; first real reply made Factory task DO-894 at 10:55 PM PT.
 
 - [x] R-7 Version the stylesheet link at publish: https://github.com/Khamel83/reports/pull/9. Done in effect: live from the
       branch since Nov 24, 2026, 8:39 PM PT (content commit `fe5ec7f`). Merge and deploy are separate: the
