@@ -247,6 +247,23 @@ class Cli(unittest.TestCase):
         self.assertEqual(self.run_build("prompt", self.root, "2026-11-25"), 0)
         self.assertEqual(self.run_build("prompt", self.root, "2026-11-25", self.out), 2)
 
+    def test_ask_cards_stay_whatever_the_model_file_holds(self):
+        os.makedirs(os.path.join(self.root, ".git"))
+        os.makedirs(os.path.join(self.root, "alpha", "bed-2026-11-25"))
+        with open(os.path.join(self.root, "alpha", "bed-2026-11-25", "index.html"), "w") as handle:
+            handle.write(page(asks=["Restart the Mac"]))
+        answer = os.path.join(self.root, "answer.html")
+        for body, failed in (("Error: provider timeout after 300 s", True), ("## Story\n- **a**", True),
+                             ("<p>partial", True), ("", True),
+                             ('<div class="card verdict"><strong>V</strong></div><section><h2>S</h2></section>', False)):
+            with open(answer, "w") as handle:
+                handle.write(body)
+            self.assertEqual(self.run_build("build", self.root, "2026-11-25", self.out, "--analysis", answer), 0)
+            out = open(self.out).read()
+            self.assertIn('<div class="card ask"><h3>alpha: Restart the Mac</h3>', out, body)
+            self.assertEqual("No combined analysis" in out, failed, body)
+            self.assertNotIn("provider timeout", out)
+
     def test_busy_lock_gives_up_with_4(self):
         os.makedirs(os.path.join(self.root, ".git"))
         with open(os.path.join(self.root, ".git", "report-publish.lock"), "a") as held:
