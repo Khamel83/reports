@@ -13,8 +13,8 @@
 
 ## Done
 
-- [x] R-4 Reply box on each page, with a Worker that sends the reply to the agent: this PR. Live Nov 24, 2026, 10:50 PM
-      PT; first real reply made Factory task DO-894 at 10:55 PM PT.
+- [x] R-4 Reply box on each page, with a Worker that sends the reply to the agent: this PR. Done in effect: live from the
+      branch since Nov 24, 2026, 10:50 PM PT (merge and deploy are separate: the source is on main only after this PR merges); first real reply made Factory task DO-894 at 10:55 PM PT.
 
 - [x] R-7 Version the stylesheet link at publish: https://github.com/Khamel83/reports/pull/9. Done in effect: live from the
       branch since Nov 24, 2026, 8:39 PM PT (content commit `fe5ec7f`). Merge and deploy are separate: the

@@ -84,7 +84,7 @@ def main(root):
 def layout_only(root):
     """True when every uncommitted change differs from HEAD only by the box and the stylesheet stamp (a killed run)."""
     git = lambda *a: subprocess.run(["git", "-C", root, "-c", "core.quotePath=false", *a],
-                                    capture_output=True, text=True)
+                                    capture_output=True, text=True, encoding="utf-8")
     plain = lambda page: STAMP.sub(r'\1"', OLD.sub("", page))
     paths = [line[3:] for line in git("status", "--porcelain", "--untracked-files=all").stdout.splitlines()]
     for path in paths:

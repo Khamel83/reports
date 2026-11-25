@@ -41,14 +41,14 @@ Settings come from the environment, never from this repo:
 
 ## Reply
 
-Every page ends with a reply box: a text field, one button for each answer in
+Every report page ends with a reply box (the dashboard pages, `/` and `/_/`, have none): a text field, one button for each answer in
 `<meta name="report:choices" content="A|B">` (optional, at most 6), and **Send**. It is a plain form with no
-script. `bin/report` adds the box to every page at each publish (`bin/report-reply-box`).
+script. `bin/report` adds the box to every report page at each publish (`bin/report-reply-box`).
 
 The form posts to `/_/reply`. The reply Worker (`worker/reply.js`) saves the reply as one JSON item
 (`schema` `reports.reply.v1`, `reply_id`, `repo`, `slug`, `page_url`, `ticket`, `title`, `choice`, `text`, `sent_at`,
 `sender`) in the owner's inbox with client name `reports`, then shows a "sent" page (its link carries an HMAC of the inbox receipt, so only a saved reply shows "Reply sent"). `reply_id` is a hash of page,
-choice and text, so the same reply sent twice counts once. Factory's inbox intake opens one Factory task for each reply. When the
+choice and text, so the same reply sent twice counts once. This is permanent: the same choice and text sent to the same page later (also after a republish) opens no second task; change the text to send it again. Factory's inbox intake opens one Factory task for each reply. When the
 inbox does not confirm it, the page says "Not confirmed" and shows the text again. The host's access gate covers
 `/_/reply` too; the Worker refuses a post without the gate's identity header or from another site. Deploy: `bin/reply-deploy` (settings in its header, from the environment).
 
