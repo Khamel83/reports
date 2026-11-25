@@ -31,9 +31,20 @@ commit() { git -C "$REPORTS_CONTENT_DIR" add -A; git -C "$REPORTS_CONTENT_DIR" d
 # Edits already in the tree are content, not layout: commit them first. Then the stylesheet and the stamp are the
 # "restyle" commit, and the new page is the "report" commit.
 # Leftovers of a killed run (only _/tokens.css and stamp edits) are layout: file them as "restyle:", not content.
-left=$(git -C "$REPORTS_CONTENT_DIR" status --porcelain | cut -c4-)
-if [ -n "$left" ] && ! git -C "$REPORTS_CONTENT_DIR" diff -U0 HEAD -- . ':(exclude)_/tokens.css' | grep -E '^[+-]' | grep -vE '^(\+\+\+|---) (a/|b/|/dev/null)' | grep -vqE 'href="/_/tokens\.css(\?v=\w+)?"' \
-   && ! printf '%s\n' "$left" | grep -vqE '(^_/tokens\.css$|/index\.html$|^index\.html$)'; then
+# Each changed file must be _/tokens.css or a page that equals its HEAD copy once the stylesheet version is removed
+# from both (whole-file compare: any other change on any line is content).
+layout_only() {
+  local c=$REPORTS_CONTENT_DIR f left unstamp='s{href="/_/tokens\.css(\?v=\w+)?"}{href="/_/tokens.css"}g'
+  left=$(git -C "$c" -c core.quotePath=false status --porcelain -uall | cut -c4-)
+  [ -n "$left" ] || return 1
+  while IFS= read -r f; do
+    [ "$f" = _/tokens.css ] && continue
+    case $f in index.html | */index.html) ;; *) return 1 ;; esac
+    [ -f "$c/$f" ] && git -C "$c" cat-file -e "HEAD:$f" 2>/dev/null || return 1
+    cmp -s <(git -C "$c" show "HEAD:$f" | perl -pe "$unstamp") <(perl -pe "$unstamp" "$c/$f") || return 1
+  done <<< "$left"
+}
+if layout_only; then
   commit "restyle: leftovers of an interrupted publish"
 fi
 commit "content: earlier uncommitted changes"
