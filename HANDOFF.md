@@ -1,6 +1,6 @@
 # Handoff
 
-Checkpoint: Nov 25, 2026, 12:20 AM PT. Host and deploy path are in `INFRA.md`; the credential name and location are in Infra's private records.
+Checkpoint: Nov 25, 2026, 12:17 AM PT. Host and deploy path are in `INFRA.md`; the credential name and location are in Infra's private records.
 
 ## Done and live
 
@@ -11,7 +11,8 @@ Checkpoint: Nov 25, 2026, 12:20 AM PT. Host and deploy path are in `INFRA.md`; t
   `bin/report` stamps `?v=<checksum>` on the stylesheet link in every page.
 - Janitor docs (#7): merged 11:19 PM PT after the reviewer's PASS.
 - Reply box (#10): merged 11:50 PM PT. Bed skill and morning report (#11): merged Nov 25, 12:12 AM PT; it also fixed
-  main CI, red since #10 (the reply Worker's stalled-inbox test ended early on Node 22).
+  main CI, red since #10 (the reply Worker's stalled-inbox test ended early on Node 22). Main CI passed on the #11
+  merge commit `f2af4c9`: https://github.com/Khamel83/reports/actions/runs/45574338718.
 - Rule "owner-readable output, plans included, goes out as a report link": README and the publishing skill.
 
 ## In flight
@@ -25,7 +26,7 @@ Checkpoint: Nov 25, 2026, 12:20 AM PT. Host and deploy path are in `INFRA.md`; t
 - R-4 reply box (#10). **Live and verified:** Worker `reports-reply` has its inbox secret since Nov 24,
   2026, 10:50 PM PT (deployed from this branch), after the Factory intake change for `reports` items and the Dispatch
   exclusion were deployed. Nov 24, 10:52 PM PT the owner pressed "Works" on `/reports/r4-reply-box/`; Factory made one
-  task, DO-894, with the page link, choice and text, at 10:55 PM PT. Way back: delete the Worker's inbox secret
+  task with the page link, choice and text, at 10:55 PM PT. Way back: delete the Worker's inbox secret
   (binding name in `bin/reply-deploy`); every reply then answers "Not confirmed".
   Known effect: the first R-4 publish put the box in a "report" commit, so five older pages show Nov 24 10:00 PM PT
   on the dashboard (same day). `bin/report` now adds the box in the "restyle" commit.
