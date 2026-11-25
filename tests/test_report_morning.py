@@ -44,6 +44,29 @@ class Build(unittest.TestCase):
         self.assertIn("alpha: Pick a name", out)
         self.assertIn("Night &amp; day", out)
 
+    def test_unknown_status_is_counted(self):
+        self.put("alpha", "bed-2026-11-25", page(status="sleeping"))
+        out = rm.render(rm.collect(self.root, "2026-11-25"), "2026-11-25")
+        self.assertIn("1 with no status", out)
+        self.assertIn("<b>1</b>not done", out)
+
+    def test_restyle_commit_does_not_move_the_date(self):
+        import subprocess
+        self.put("alpha", "bed-2026-11-25", page())
+        git = lambda *a, **env: subprocess.run(["git", "-C", self.root, *a], check=True, capture_output=True,
+                                               env={**os.environ, **env})
+        git("init", "-q")
+        git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qam", "x", "--allow-empty")
+        git("add", "-A")
+        git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "report: alpha",
+            GIT_AUTHOR_DATE="2026-11-25T01:00:00-08:00", GIT_COMMITTER_DATE="2026-11-25T01:00:00-08:00")
+        with open(os.path.join(self.root, "alpha", "bed-2026-11-25", "index.html"), "a") as handle:
+            handle.write(" ")
+        git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qam", "restyle: stylesheet 1",
+            GIT_AUTHOR_DATE="2026-11-25T04:00:00-08:00", GIT_COMMITTER_DATE="2026-11-25T04:00:00-08:00")
+        when = rm.collect(self.root, "2026-11-25")[0]["when"]
+        self.assertEqual(when.hour, 1)
+
 
 if __name__ == "__main__":
     unittest.main()
