@@ -7,6 +7,18 @@ repo=$2 slug=$3 file=$4
 : "${REPORTS_CONTENT_DIR:?}" "${REPORTS_PROJECT:?}" "${CLOUDFLARE_API_TOKEN:?}" "${CLOUDFLARE_ACCOUNT_ID:?}"
 grep -qE 'href="/_/tokens\.css(\?v=[0-9a-z]+)?"' "$file" || { echo "report must link /_/tokens.css" >&2; exit 2; }
 here=$(cd "$(dirname "$0")/.." && pwd)
+# One publish at a time on the content checkout: the reset below must never touch another run's files. The lock is a
+# directory in .git holding the owner's pid; a lock whose pid is gone (killed run) is taken over. Wait up to 5 min.
+lock="$REPORTS_CONTENT_DIR/.git/report-publish.lock"
+for _ in $(seq 300); do
+  if mkdir "$lock" 2>/dev/null; then echo $$ > "$lock/pid"; break; fi
+  old=$(cat "$lock/pid" 2>/dev/null || true)
+  if [ -n "$old" ] && ! kill -0 "$old" 2>/dev/null; then rm -rf "$lock"; continue; fi
+  sleep 1
+done
+[ "$(cat "$lock/pid" 2>/dev/null)" = $$ ] || { echo "another publish holds $lock" >&2; exit 3; }
+unlock() { rm -rf "$lock"; }
+trap unlock EXIT
 dest="$REPORTS_CONTENT_DIR/$repo/$slug"; mkdir -p "$dest" "$REPORTS_CONTENT_DIR/_"
 # Browsers keep /_/tokens.css for hours (the host sends max-age=14400), so every page links it with a version.
 # A new stylesheet restamps all pages; that commit starts with "restyle", which the dashboard does not count as a change.
@@ -20,7 +32,7 @@ commit() { git -C "$REPORTS_CONTENT_DIR" add -A; git -C "$REPORTS_CONTENT_DIR" d
 # "restyle" commit, and the new page is the "report" commit.
 # Leftovers of a killed run (only _/tokens.css and stamp edits) are layout: file them as "restyle:", not content.
 left=$(git -C "$REPORTS_CONTENT_DIR" status --porcelain | cut -c4-)
-if [ -n "$left" ] && ! git -C "$REPORTS_CONTENT_DIR" diff -U0 HEAD -- . ':(exclude)_/tokens.css' | grep -E '^[+-][^+-]' | grep -vqE 'href="/_/tokens\.css(\?v=\w+)?"' \
+if [ -n "$left" ] && ! git -C "$REPORTS_CONTENT_DIR" diff -U0 HEAD -- . ':(exclude)_/tokens.css' | grep -E '^[+-]' | grep -vE '^(\+\+\+|---) (a/|b/|/dev/null)' | grep -vqE 'href="/_/tokens\.css(\?v=\w+)?"' \
    && ! printf '%s\n' "$left" | grep -vqE '(^_/tokens\.css$|/index\.html$|^index\.html$)'; then
   commit "restyle: leftovers of an interrupted publish"
 fi
@@ -29,12 +41,12 @@ commit "content: earlier uncommitted changes"
 # new run. A failed run resets it to the last commit, so stamps never wait to fall into a later "content" commit.
 # A killed run (SIGKILL, power loss) skips the trap; the leftover check above files those edits as "restyle:".
 reset() { git -C "$REPORTS_CONTENT_DIR" reset -q --hard HEAD; git -C "$REPORTS_CONTENT_DIR" clean -fdq; echo "publish failed: content tree reset to the last commit" >&2; }
-trap 'rc=$?; [ $rc -eq 0 ] || reset' EXIT
+trap 'rc=$?; [ $rc -eq 0 ] || reset; unlock' EXIT
 cp "$here/tokens.css" "$REPORTS_CONTENT_DIR/_/tokens.css"; stamp; commit "restyle: stylesheet $v"
 cp "$file" "$dest/index.html"; stamp
 "$here/bin/report-index" "$REPORTS_CONTENT_DIR"; stamp  # dashboard at / and /_/by-repo/
 commit "report: $repo/$slug"
-trap - EXIT  # all committed; push and deploy failures leave nothing to reset
+trap unlock EXIT  # all committed; push and deploy failures leave nothing to reset
 git -C "$REPORTS_CONTENT_DIR" push -q origin HEAD || echo "warning: content backup push failed" >&2
 cd "$REPORTS_CONTENT_DIR"  # Pagecast writes .pagecast/ into the current directory
 DO_NOT_TRACK=1 PAGECAST_TELEMETRY=0 npx --yes pagecast@0.7.0 pages deploy "$REPORTS_CONTENT_DIR" --project "$REPORTS_PROJECT" --json >/dev/null
