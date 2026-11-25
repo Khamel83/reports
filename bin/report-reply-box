@@ -1,0 +1,77 @@
+#!/usr/bin/env python3
+"""Put the reply box at the end of every report page in the content tree.
+
+usage: report-reply-box <content-dir>
+
+The box is a plain HTML form (no script) that posts to /_/reply, where the reply Worker saves it for Factory.
+Each page gets one box, between the markers below, before the footer (or before </main>). A second run replaces the box, so a new
+box version reaches every page. The dashboard pages (/ and everything under /_/) get no box.
+Answer buttons come from <meta name="report:choices" content="A|B">: one button for each choice, at most 6.
+"""
+import html
+import os
+import re
+import sys
+
+START, END = "<!-- reply-box -->", "<!-- /reply-box -->"
+NAME = re.compile(r"[a-z0-9][a-z0-9._-]*\Z")
+SLUG = re.compile(r"[a-z0-9][a-z0-9-]*\Z")
+OLD = re.compile(re.escape(START) + r".*?" + re.escape(END) + r"\n?", re.S)
+
+
+def meta(page, name):
+    found = re.search(r'<meta name="report:' + name + r'" content="([^"]*)"', page)
+    return html.unescape(found.group(1)) if found else ""
+
+
+def box(page, repo, slug):
+    title = re.search(r"<title>(.*?)</title>", page, re.S)
+    fields = dict(repo=repo, slug=slug, ticket=meta(page, "ticket")[:64],
+                  title=html.unescape(title.group(1)).strip()[:200] if title else "")
+    hidden = "".join(f'<input type="hidden" name="{key}" value="{html.escape(value)}">'
+                     for key, value in fields.items())
+    choices = [c.strip() for c in meta(page, "choices").split("|") if c.strip()][:6]
+    buttons = "".join(f'<button class="choice" name="choice" value="{html.escape(c[:80])}">{html.escape(c[:80])}</button>'
+                      for c in choices)
+    return (f'{START}\n<section class="reply" id="reply">\n<h2>Reply</h2>\n'
+            f'<form method="post" action="/_/reply">{hidden}\n'
+            '<label for="reply-text">Your answer, decision or change. Factory gets it within 5 minutes.</label>\n'
+            '<textarea id="reply-text" name="text" rows="4" maxlength="4000"></textarea>\n'
+            f'<div class="actions">{buttons}<button class="btn" name="choice" value="">Send</button></div>\n'
+            f'</form>\n</section>\n{END}\n')
+
+
+def apply(page, repo, slug):
+    """Return the page with exactly one current box, or the page unchanged when it has no </main>."""
+    page = OLD.sub("", page)
+    end = page.rfind("</main>")
+    if end < 0:
+        return page
+    footer = page.rfind('<footer class="meta"', 0, end)
+    at = footer if footer >= 0 else end
+    return page[:at] + box(page, repo, slug) + page[at:]
+
+
+def main(root):
+    changed = 0
+    for repo in sorted(os.listdir(root)):
+        if not NAME.match(repo) or not os.path.isdir(os.path.join(root, repo)):
+            continue  # "_" (dashboard, stylesheet) and ".git" do not match NAME
+        for slug in sorted(os.listdir(os.path.join(root, repo))):
+            path = os.path.join(root, repo, slug, "index.html")
+            if not SLUG.match(slug) or not os.path.isfile(path):
+                continue
+            with open(path, encoding="utf-8") as handle:
+                page = handle.read()
+            new = apply(page, repo, slug)
+            if new != page:
+                with open(path, "w", encoding="utf-8") as handle:
+                    handle.write(new)
+                changed += 1
+    return changed
+
+
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        sys.exit("usage: report-reply-box <content-dir>")
+    print(f"reply box: {main(sys.argv[1])} page(s) changed", file=sys.stderr)

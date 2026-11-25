@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# reply-deploy: deploy the reply Worker (worker/reply.js) on <host>/_/reply*. See README.md ("Reply").
+# env: CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID  (Workers Scripts write; Workers Routes write on the zone)
+#      REPORTS_DROP_SERVICE  name of the inbox Worker for the service binding
+#      DROP_INTAKE_TOKEN     inbox intake token, stored as a Worker secret
+#      REPORTS_HOST (default reports.khamel.com)  REPORTS_REPLY_WORKER (default reports-reply)
+set -euo pipefail
+: "${CLOUDFLARE_API_TOKEN:?}" "${CLOUDFLARE_ACCOUNT_ID:?}" "${REPORTS_DROP_SERVICE:?}" "${DROP_INTAKE_TOKEN:?}"
+host=${REPORTS_HOST:-reports.khamel.com} name=${REPORTS_REPLY_WORKER:-reports-reply}
+[[ $host =~ ^[a-z0-9.-]+$ && $name =~ ^[a-z0-9-]+$ && $REPORTS_DROP_SERVICE =~ ^[a-z0-9-]+$ ]] || { echo "bad name" >&2; exit 2; }
+here=$(cd "$(dirname "$0")/.." && pwd)
+work=$(mktemp -d); trap 'rm -rf "$work"' EXIT
+cp "$here/worker/reply.js" "$work/reply.js"
+cat > "$work/wrangler.toml" <<EOF
+name = "$name"
+main = "reply.js"
+compatibility_date = "2026-11-01"
+workers_dev = false
+routes = [{ pattern = "$host/_/reply*", zone_name = "${host#*.}" }]
+services = [{ binding = "DROP", service = "$REPORTS_DROP_SERVICE" }]
+EOF
+cd "$work"
+wrangler=(npx --yes wrangler@4)
+export WRANGLER_SEND_METRICS=false
+"${wrangler[@]}" deploy
+printf '%s' "$DROP_INTAKE_TOKEN" | "${wrangler[@]}" secret put DROP_INTAKE_TOKEN
+echo "deployed: https://$host/_/reply"

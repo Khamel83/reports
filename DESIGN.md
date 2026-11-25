@@ -31,6 +31,7 @@ Sections get alternate band colours automatically. Start from `template/report.h
 | Flow | `<div class="flow"><div><h3>…</h3><p>…</p></div>…</div>` | 2 to 4 boxes joined in order |
 | Timeline | `<ol class="timeline"><li class="done"><b>M0</b><h3>…</h3><p>…</p></li>…` | Milestones or dates in a row |
 | Rows | `<ul class="rows"><li><span class="tag">plan</span><span>repo</span><span><a href="…">Title</a><small>full link</small></span><time>Nov 24</time></li>…` | A list of links with a label, a source and a date |
+| Reply box | Added by `bin/report`; answer buttons from `<meta name="report:choices" content="A\|B">` | Owner answers. Do not write your own form |
 | Caveat | `<p class="note">` | Limits of the evidence |
 | Footer | `<footer class="meta">` | Author, date, sources, what is unverified |
 

@@ -39,6 +39,18 @@ Settings come from the environment, never from this repo:
 | `REPORTS_PROJECT` | Cloudflare Pages project name |
 | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` | Pages-edit token; the owner's vault supplies it |
 
+## Reply
+
+Every page ends with a reply box: a text field, one button for each answer in
+`<meta name="report:choices" content="A|B">` (optional, at most 6), and **Send**. It is a plain form with no
+script. `bin/report` adds the box to every page at each publish (`bin/report-reply-box`).
+
+The form posts to `/_/reply`. The reply Worker (`worker/reply.js`) saves the reply as one JSON item
+(`reports.reply.v1`: repo, slug, page link, ticket, title, choice, text, time) in the owner's inbox with client
+name `reports`, then shows a "sent" page. Factory's inbox intake opens one Factory task for each reply. When the
+inbox does not save it, the page says "Not sent" and shows the text again. The host's access gate covers
+`/_/reply` too. Deploy: `bin/reply-deploy` (settings in its header, from the environment).
+
 ## Rules for this repo
 
 Never commit a token, a key, a report, or a private hostname/ID. CI fails a commit that does (`scripts/check.sh`).
