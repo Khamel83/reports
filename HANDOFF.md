@@ -1,6 +1,6 @@
 # Handoff
 
-Checkpoint: Nov 25, 2026, 12:17 AM PT. Host and deploy path are in `INFRA.md`; the credential name and location are in Infra's private records.
+Checkpoint: Nov 25, 2026, 5:54 AM PT. Host and deploy path are in `INFRA.md`; the credential name and location are in Infra's private records.
 
 ## Done and live
 
@@ -20,8 +20,10 @@ Checkpoint: Nov 25, 2026, 12:17 AM PT. Host and deploy path are in `INFRA.md`; t
 - Bed night Nov 24 to 25: all four PRs (#7, #9, #10, #11) merged. Report: https://reports.khamel.com/reports/bed-2026-11-25/.
 - Bed (R-8): the Mac parts (the `bed` skill, its morning job at 5:00 AM PT, the log and the macOS disk-access note)
   are installed on the Mac and described in the skill, not here. The reports checkout on the Mac is on `main`; keep
-  it there, because the job and every publish run from it. Next check: the 5 AM run on Nov 25 (`/morning/` changes,
-  log ends with "live:").
+  it there, because the job and every publish run from it. The Nov 25 5:00 AM PT run hung (a hard link hung on the
+  Mac's project disk, for every program); I stopped it and published `/morning/` by hand at 5:54 AM PT. The job now
+  avoids hard links and stops after 30 minutes. The owner must restart the Mac (or reconnect the disk) to clear the
+  hang; the report asks him. Next check: the Nov 26 5:00 AM PT run (log ends with "live:", not "TIMEOUT").
 
 - R-4 reply box (#10). **Live and verified:** Worker `reports-reply` has its inbox secret since Nov 24,
   2026, 10:50 PM PT (deployed from this branch), after the Factory intake change for `reports` items and the Dispatch
