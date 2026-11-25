@@ -24,9 +24,10 @@ VIEWS = {"day": ("/", "index.html"), "repo": ("/_/by-repo/", os.path.join("_", "
 
 
 def change_times(root):
-    """Path -> author time of its last commit; uncommitted paths get now. Empty when root is not a git repo.
+    """Path -> author time of its last commit; paths this publish changes get now.
 
     Author time, so a restyle of old pages can keep their dates with `git commit --date`.
+    Empty when root is not a git repo; then collect() uses file times.
     """
     def git(*args):  # quotePath off and -z: paths come back literal, as collect() looks them up
         return subprocess.run(["git", "-C", root, "-c", "core.quotePath=false", *args],
@@ -38,12 +39,20 @@ def change_times(root):
                 stamp = int(line[1:])
             elif line:
                 times.setdefault(line, stamp)
-        # Changed or new pages are the ones this publish is about to commit.
-        for path in git("ls-files", "-z", "--modified", "--others", "--exclude-standard").split("\0"):
-            if path:
-                times[path] = int(time.time())
     except (subprocess.CalledProcessError, FileNotFoundError):
-        return {}
+        pass  # no commits yet, or not a git repo
+    try:  # staged, unstaged and untracked paths: bin/report commits them all next
+        fields = git("status", "--porcelain", "-z", "--untracked-files=all").split("\0")
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return times
+    now, index = int(time.time()), 0
+    while index < len(fields):
+        entry = fields[index]
+        index += 1
+        if len(entry) > 3:
+            times[entry[3:]] = now
+            if "R" in entry[:2] or "C" in entry[:2]:
+                index += 1  # a rename or copy carries its old path as one more field
     return times
 
 
