@@ -39,7 +39,8 @@ function same(a, b) {
 }
 
 export function buildReply(form, { host, sender, now, id }) {
-  const get = (key) => String(form.get(key) ?? "").trim();
+  // Browsers send textarea line breaks as CRLF but count them as one character for maxlength: count them as one too.
+  const get = (key) => String(form.get(key) ?? "").replace(/\r\n?/g, "\n").trim();
   const repo = get("repo");
   const slug = get("slug");
   if (!NAME.test(repo) || !SLUG.test(slug)) return { error: "This reply has no valid page. Send it from a report page." };
@@ -115,6 +116,9 @@ export default {
     reply.reply_id = await replyId(reply.repo, reply.slug, reply.choice, reply.text);
     const back = `/${reply.repo}/${reply.slug}/`;
 
+    if (!env.DROP_INTAKE_TOKEN) {  // no secret: the box is paused (bin/reply-deploy); never call the inbox without it
+      return page(503, "Not confirmed", "The reply box is paused. Your text is below; send it later.", back, text);
+    }
     let receipt = null;
     try {
       const response = await env.DROP.fetch(`https://${url.host}/ingest/drop`, {

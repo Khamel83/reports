@@ -113,3 +113,19 @@ test("buildReply keeps the sender and the time", () => {
   assert.equal(value.sent_at, "T");
   assert.equal(value.reply_id, "I");
 });
+
+test("CRLF line breaks count as one character and are saved as LF", async () => {
+  const { calls, env } = inbox({ ok: true, drop_id: "2600" });
+  const text = "ab\r\n".repeat(1300).trim();  // 3899 characters in the browser, 5198 with CRLF
+  const response = await worker.fetch(post({ ...page, text }), env);
+  assert.equal(response.status, 303);
+  assert.equal(JSON.parse(calls[0].init.body).text, text.replaceAll("\r\n", "\n"));
+});
+
+test("without the intake secret nothing goes to the inbox", async () => {
+  const { calls, env } = inbox({ ok: true, drop_id: "2601" });
+  delete env.DROP_INTAKE_TOKEN;
+  const response = await worker.fetch(post({ ...page, text: "hi" }), env);
+  assert.equal(response.status, 503);
+  assert.equal(calls.length, 0);
+});
