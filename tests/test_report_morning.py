@@ -1,15 +1,31 @@
 """Tests for bin/report-morning."""
+import fcntl
 import importlib.machinery
 import importlib.util
 import os
+import shutil
+import subprocess
+import sys
 import tempfile
 import unittest
+from unittest import mock
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-loader = importlib.machinery.SourceFileLoader("report_morning", os.path.join(HERE, "..", "bin", "report-morning"))
-spec = importlib.util.spec_from_loader("report_morning", loader)
-rm = importlib.util.module_from_spec(spec)
-loader.exec_module(rm)
+BIN = os.path.join(HERE, "..", "bin")
+# Real git commits in tests must not depend on the machine's git config (signing, hooks).
+GIT_ENV = {**os.environ, "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1",
+           "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t", "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@t"}
+
+
+def load(name, file):
+    loader = importlib.machinery.SourceFileLoader(name, os.path.join(BIN, file))
+    module = importlib.util.module_from_spec(importlib.util.spec_from_loader(name, loader))
+    loader.exec_module(module)
+    return module
+
+
+rm = load("report_morning", "report-morning")
+ri = load("report_index", "report-index")
 
 
 def page(kind="bed", status="done", lede="Shipped the fix.", asks=()):
@@ -22,6 +38,7 @@ def page(kind="bed", status="done", lede="Shipped the fix.", asks=()):
 class Build(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.root, True)
 
     def put(self, repo, slug, body):
         os.makedirs(os.path.join(self.root, repo, slug))
@@ -43,6 +60,7 @@ class Build(unittest.TestCase):
         self.assertIn('href="/_/tokens.css"', out)
         self.assertIn("alpha: Pick a name", out)
         self.assertIn("Night &amp; day", out)
+        self.assertNotIn("Not counted", out)
 
     def test_unreadable_ask_warns(self):
         import contextlib, io
@@ -51,7 +69,8 @@ class Build(unittest.TestCase):
         with contextlib.redirect_stderr(err):
             rows = rm.collect(self.root, "2026-11-25")
         self.assertEqual(rows[0]["asks"], [])
-        self.assertIn("does not match the bed markup", err.getvalue())
+        self.assertIn("do not match the bed markup", err.getvalue())
+        self.assertIn("Not counted: 1 ask cards or numbers in alpha", rm.render(rows, "2026-11-25"))
 
     def test_impossible_date_is_refused(self):
         self.assertFalse(rm.real_date("2026-02-30"))
@@ -64,21 +83,70 @@ class Build(unittest.TestCase):
         self.assertIn("<b>1</b>not done", out)
 
     def test_restyle_commit_does_not_move_the_date(self):
-        import subprocess
         self.put("alpha", "bed-2026-11-25", page())
-        git = lambda *a, **env: subprocess.run(["git", "-C", self.root, *a], check=True, capture_output=True,
-                                               env={**os.environ, **env})
+        git = lambda *a, **dates: subprocess.run(["git", "-C", self.root, *a], check=True, capture_output=True,
+                                                 env={**GIT_ENV, **dates})
         git("init", "-q")
-        git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qam", "x", "--allow-empty")
         git("add", "-A")
-        git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "report: alpha",
+        git("commit", "-qm", "report: alpha",
             GIT_AUTHOR_DATE="2026-11-25T01:00:00-08:00", GIT_COMMITTER_DATE="2026-11-25T01:00:00-08:00")
         with open(os.path.join(self.root, "alpha", "bed-2026-11-25", "index.html"), "a") as handle:
             handle.write(" ")
-        git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qam", "restyle: stylesheet 1",
+        git("commit", "-qam", "restyle: stylesheet 1",
             GIT_AUTHOR_DATE="2026-11-25T04:00:00-08:00", GIT_COMMITTER_DATE="2026-11-25T04:00:00-08:00")
         when = rm.collect(self.root, "2026-11-25")[0]["when"]
         self.assertEqual(when.hour, 1)
+
+
+class Cli(unittest.TestCase):
+    def setUp(self):
+        self.root = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.root, True)
+        self.out = os.path.join(self.root, "out.html")
+
+    def run_build(self, *args):
+        return subprocess.run([sys.executable, os.path.join(BIN, "report-morning"), *args],
+                              capture_output=True, text=True).returncode
+
+    def test_exit_codes(self):
+        self.assertEqual(self.run_build("build", self.root, "2026-02-30", self.out), 2)
+        self.assertEqual(self.run_build("build", self.root, "2026-11-25", self.out), 4)  # no .git: no lock
+        os.makedirs(os.path.join(self.root, ".git"))
+        self.assertEqual(self.run_build("build", self.root, "2026-11-25", self.out), 3)
+        os.makedirs(os.path.join(self.root, "alpha", "bed-2026-11-25"))
+        with open(os.path.join(self.root, "alpha", "bed-2026-11-25", "index.html"), "w") as handle:
+            handle.write(page())
+        self.assertEqual(self.run_build("build", self.root, "2026-11-25", self.out), 0)
+        self.assertTrue(os.path.getsize(self.out))
+
+    def test_busy_lock_gives_up_with_4(self):
+        os.makedirs(os.path.join(self.root, ".git"))
+        with open(os.path.join(self.root, ".git", "report-publish.lock"), "a") as held:
+            fcntl.flock(held, fcntl.LOCK_EX)
+            with mock.patch.object(rm.time, "sleep"), \
+                    mock.patch.object(sys, "argv", ["report-morning", "build", self.root, "2026-11-25", self.out]), \
+                    self.assertRaises(SystemExit) as stop:
+                rm.main()
+        self.assertEqual(stop.exception.code, 4)
+
+
+class Index(unittest.TestCase):
+    def test_morning_copy_and_banner_follow_the_newest_morning_page(self):
+        root = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, root, True)
+        page_dir = os.path.join(root, "reports", "morning-2026-11-25")
+        os.makedirs(page_dir)
+        with open(os.path.join(page_dir, "index.html"), "w") as handle:
+            handle.write('<title>While you slept</title><meta name="report:kind" content="morning">')
+        with mock.patch.object(sys, "argv", ["report-index", root]):
+            ri.main()
+        self.assertIn("While you slept", open(os.path.join(root, "morning", "index.html")).read())
+        self.assertIn('href="/morning/"', open(os.path.join(root, "index.html")).read())
+        shutil.rmtree(page_dir)
+        with mock.patch.object(sys, "argv", ["report-index", root]):
+            ri.main()
+        self.assertFalse(os.path.exists(os.path.join(root, "morning", "index.html")))
+        self.assertNotIn('href="/morning/"', open(os.path.join(root, "index.html")).read())
 
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Morning report: one page for all the bed reports of one night.
 
-usage: report-morning build <content-dir> <date> <out.html>   exit 2 bad arguments, 3 no bed reports, 4 lock busy
+usage: report-morning build <content-dir> <date> <out.html>   exit 2 bad arguments, 3 no bed reports, 4 lock busy or missing
 
 A bed report is the page <repo>/bed-<date>[-<topic>]/index.html with <meta name="report:kind" content="bed">.
 <date> is the date of the morning the owner reads it (see the bed skill). Its <meta name="bed:status"> is
@@ -64,16 +64,16 @@ def collect(root, date):
             asks = [text(h) for h in re.findall(r'<div class="card ask">\s*<h3>(.*?)</h3>', page, re.S)]
             stats = [(text(b), text(label)) for b, label in
                      re.findall(r'<div class="stat"><b>(.*?)</b>(.*?)</div>', page, re.S)]
-            if len(asks) != len(re.findall(r'class="card ask', page)) or \
-                    len(stats) != len(re.findall(r'class="stat"', page)):
-                print(f"warning: {rel}: an ask card or a stat does not match the bed markup; "
-                      "the morning page can miss it", file=sys.stderr)
+            unread = (len(re.findall(r'class="card ask', page)) - len(asks)
+                      + len(re.findall(r'class="stat"', page)) - len(stats))
+            if unread:
+                print(f"warning: {rel}: {unread} ask card(s) or stat(s) do not match the bed markup", file=sys.stderr)
             rows.append(dict(
                 repo=repo, path=f"/{repo}/{slug}/",
                 title=text(title.group(1)) if title else slug,
                 lede=text(lede.group(1)) if lede else "",
                 status=status if status in STATUS_TAG else "unknown",
-                stats=stats, asks=asks,
+                stats=stats, asks=asks, unread=unread,
                 when=changed(root, rel)))
     return rows
 
@@ -98,7 +98,11 @@ def render(rows, date):
         + f'<p><small>Last change {r["when"].strftime("%b %-d, %-I:%M %p PT")}</small></p>'
         f'<p><a class="btn" href="{e(r["path"])}">Open report</a></p></div>\n'
         for r in rows)
-    needs = (f'<section>\n<h2>Needs you</h2>\n{ask_cards}</section>\n' if ask_cards else "")
+    unread = [r for r in rows if r.get("unread")]
+    warning = (f'<p class="note">Not counted: {sum(r["unread"] for r in unread)} ask cards or numbers in '
+               f'{", ".join(e(r["repo"]) for r in unread)} do not match the bed markup. Open those reports.</p>\n'
+               if unread else "")
+    needs = (f'<section>\n<h2>Needs you</h2>\n{warning}{ask_cards}</section>\n' if ask_cards or warning else "")
     return f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>While you slept: {e(day)}</title>
@@ -138,7 +142,12 @@ def main():
     args = sys.argv[1:]
     if len(args) == 4 and args[0] == "build" and real_date(args[2]):
         # Read under bin/report's publish lock, so a publish that fails and resets the tree is never half-read.
-        with open(os.path.join(args[1], ".git", "report-publish.lock"), "a") as lock:
+        try:
+            lock = open(os.path.join(args[1], ".git", "report-publish.lock"), "a")
+        except OSError as error:
+            print(f"cannot open the publish lock: {error}", file=sys.stderr)
+            sys.exit(4)
+        with lock:
             for _ in range(300):
                 try:
                     fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)

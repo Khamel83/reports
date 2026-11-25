@@ -140,10 +140,12 @@ def main():
     root = sys.argv[1]
     rows = collect(root)
     latest = next((r for r in rows if r["kind"] == "morning"), None)
+    copy = os.path.join(root, "morning", "index.html")
     if latest:  # /morning/ always shows the newest morning report
-        os.makedirs(os.path.join(root, "morning"), exist_ok=True)
-        shutil.copyfile(os.path.join(root, latest["path"].strip("/"), "index.html"),
-                        os.path.join(root, "morning", "index.html"))
+        os.makedirs(os.path.dirname(copy), exist_ok=True)
+        shutil.copyfile(os.path.join(root, latest["path"].strip("/"), "index.html"), copy)
+    elif os.path.exists(copy):  # no morning page left: no stale copy
+        os.remove(copy)
     for view, (_, target) in VIEWS.items():
         path = os.path.join(root, target)
         os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
