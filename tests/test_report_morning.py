@@ -2,6 +2,7 @@
 import fcntl
 import importlib.machinery
 import importlib.util
+from html.parser import HTMLParser
 import os
 import shutil
 import subprocess
@@ -160,21 +161,29 @@ class Analysis(unittest.TestCase):
         self.assertIn("<a>bad2</a>", out)
         for href in ("/\\evil.example/", "https://x/\\y", "/a b", "/&#92;evil.example/", "/\x01/evil.example/",
                      "/a\x7fb", "HTTPS://x/", " /x"):
-            self.assertEqual(rm.clean(f'<h2>h</h2><a href="{href}">x</a>'), "<h2>h</h2><a>x</a>")
-        self.assertEqual(rm.clean('<script><a href="/r/">in</a></script><h2>after</h2>'), "<h2>after</h2>")
+            self.assertEqual(rm.clean(f'<h2>h</h2><a href="{href}">x</a>'), "<section><h2>h</h2><a>x</a></section>")
+        self.assertEqual(rm.clean('<script><a href="/r/">in</a></script><h2>after</h2>'),
+                         "<section><h2>after</h2></section>")
         self.assertIn("1 &lt; 2 &amp; <b>open</b></p>", out)
         self.assertTrue(out.endswith("</section>"))
         self.assertEqual(rm.clean("Error: no provider answered"), "")
         self.assertEqual(rm.clean("## Story\n- a *b*"), "")
         nested = rm.clean('<div class="card verdict"><p>V<section><h2>S</h2></section>')
-        self.assertEqual(nested, '<div class="card verdict"><p>V</p></div><section><h2>S</h2></section>')
+        self.assertEqual(nested, '<section><div class="card verdict"><p>V</p></div></section>'
+                                 '<section><h2>S</h2></section>')
+        loose = rm.clean('<section><h2>A</h2></section>\n<p>loose</p> text <section><h2>B</h2></section>')
+        self.assertEqual(loose, '<section><h2>A</h2></section>\n<section><p>loose</p> text </section>'
+                                '<section><h2>B</h2></section>')
+        self.assertEqual(rm.clean('<h2>A</h2></div></section></p><p>x</p>'),   # stray end tags stay balanced
+                         '<section><h2>A</h2></section><section><p>x</p></section>')
 
     def test_render_with_analysis_and_without(self):
         rows = [dict(repo="alpha", path="/alpha/bed-2026-11-25/", title="T", lede="L", status="done", stats=[],
                      asks=["Pick a name"], unread=0, when=rm.datetime(2026, 11, 25, 1, tzinfo=rm.PT))]
         with_it = rm.render(rows, "2026-11-25", analysis=rm.clean(
             '<div class="card verdict"><strong>V</strong></div><section><h2>Overlaps</h2></section>'))
-        self.assertIn('<section>\n<div class="card verdict"><strong>V</strong></div>\n</section>', with_it)
+        self.assertIn('<section><div class="card verdict"><strong>V</strong></div></section>'
+                      '<section><h2>Overlaps</h2></section>', with_it)
         self.assertIn("<h2>Overlaps</h2>", with_it)
         self.assertIn("alpha: Pick a name", with_it)   # the plain ask list always stays
         self.assertIn("Asks in each report", with_it)
@@ -183,6 +192,33 @@ class Analysis(unittest.TestCase):
         self.assertIn("No combined analysis this morning", failed)
         self.assertIn("alpha: Pick a name", failed)
         self.assertNotIn("No combined analysis", rm.render(rows, "2026-11-25"))
+
+
+    def test_messy_analysis_gives_balanced_top_level_bands(self):
+        class Tree(HTMLParser):
+            def __init__(self):
+                super().__init__()
+                self.stack, self.errors, self.parents = [], [], set()
+
+            def handle_starttag(self, tag, attrs):
+                if tag not in ("meta", "link", "br"):
+                    if tag == "section":
+                        self.parents.add(self.stack[-1] if self.stack else None)
+                    self.stack.append(tag)
+
+            def handle_endtag(self, tag):
+                if self.stack and self.stack[-1] == tag:
+                    self.stack.pop()
+                else:
+                    self.errors.append(tag)
+
+        rows = [dict(repo="alpha", path="/alpha/bed-2026-11-25/", title="T", lede="L", status="done", stats=[],
+                     asks=["Pick a name"], unread=0, when=rm.datetime(2026, 11, 25, 1, tzinfo=rm.PT))]
+        analysis = rm.clean('<div class="card verdict"><strong>V</strong><ul><li>x<section><h2>S</h2><div><p>y'
+                            '</section>loose text<div>z</p></li>')
+        tree = Tree()
+        tree.feed(rm.render(rows, "2026-11-25", analysis=analysis))
+        self.assertEqual((tree.errors, tree.stack, tree.parents), ([], [], {"main"}))
 
 
 class Cli(unittest.TestCase):
