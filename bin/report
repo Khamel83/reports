@@ -20,6 +20,13 @@ commit() { git -C "$REPORTS_CONTENT_DIR" add -A; git -C "$REPORTS_CONTENT_DIR" d
 box() { "$here/bin/report-reply-box" "$REPORTS_CONTENT_DIR"; }
 # Edits already in the tree are content, not layout: commit them first. Then the stylesheet, the stamp and the box
 # are the "restyle" commit, and the new page is the "report" commit.
+# Leftovers of a killed run (only _/tokens.css and stamp edits) are layout: file them as "restyle:", not content.
+# Box leftovers of a killed run are not detected and count as content once (rare: the run must die mid-step).
+left=$(git -C "$REPORTS_CONTENT_DIR" status --porcelain | cut -c4-)
+if [ -n "$left" ] && ! git -C "$REPORTS_CONTENT_DIR" diff -U0 HEAD -- . ':(exclude)_/tokens.css' | grep -E '^[+-][^+-]' | grep -vqE 'href="/_/tokens\.css(\?v=\w+)?"' \
+   && ! printf '%s\n' "$left" | grep -vqE '(^_/tokens\.css$|/index\.html$|^index\.html$)'; then
+  commit "restyle: leftovers of an interrupted publish"
+fi
 commit "content: earlier uncommitted changes"
 # From here the tree holds only what this publish writes (stylesheet, stamps, box, page, dashboard), all made again
 # by a new run. A failed run resets it to the last commit, so stamps never wait to fall into a later "content" commit.
