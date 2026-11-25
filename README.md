@@ -12,6 +12,7 @@ Public on purpose: this repo holds the rules, the look and the tools. It holds *
   (`ioniq-5-vs-6-vs-egolf`); use a ticket or date when no good name exists.
 - **File:** one self-contained `index.html` per report at `<repo>/<slug>/index.html`. No external scripts or images.
 - **Look:** link `/_/tokens.css` (from `tokens.css` here) and start from `template/report.html`. Read `DESIGN.md`.
+  The publisher adds `?v=<checksum>` to that link in every page, because browsers keep the stylesheet for hours.
 - **Metadata:** the `<meta name="report:*">` tags in the template: `kind` (one lowercase word: `report`, `plan`,
   `research`, `review`, `status`), `repo`, `ticket`, `created`.
 - **Dashboard:** `https://<host>/` lists every page, newest first, by day; `/_/by-repo/` lists them by repo. Each row

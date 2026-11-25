@@ -16,6 +16,10 @@ the hero + section layout with a `report:kind` tag. Seen in the owner's Chrome a
 The shared agent rule "owner-readable output goes out as a report link" merged as Khamel83/infra#2421; it was not yet
 in `~/.agents/shared-rules.md` on the Mac at 8:35 PM PT (Infra's rules sync installs it).
 
+Stylesheet cache: the host serves `/_/tokens.css` with `max-age=14400`, so a browser that had the old file showed
+new pages with the old stylesheet (owner report, Nov 24, 8:37 PM PT). `bin/report` now stamps `?v=<checksum>` on
+the link in every page; a restamp commits as `restyle: ...`, which the dashboard does not count as a change.
+
 Open: the `report` skill and its publish path exist on the Mac only (Homelab and OCI agents reach reports through
 Factory); pages from the visual-explainer plugin do not link `/_/tokens.css`, so `bin/report` refuses them;
 Open: reply box + Worker, Factory step that calls `bin/report` automatically, Slack thread link on every Penny note,
