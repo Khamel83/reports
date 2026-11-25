@@ -13,18 +13,23 @@ dest="$REPORTS_CONTENT_DIR/$repo/$slug"; mkdir -p "$dest" "$REPORTS_CONTENT_DIR/
 v=$(cksum < "$here/tokens.css" | cut -d' ' -f1)
 stamp() { find "$REPORTS_CONTENT_DIR" -name index.html -not -path '*/.git/*' -exec \
   perl -pi -e 's{href="/_/tokens\.css(\?v=\w+)?"}{href="/_/tokens.css?v='"$v"'"}g' {} +; }
-# Commit everything staged under one label. No change: no commit. A failed commit stops the publish (set -e), so
-# restyle lines can never fall into the report commit and move every page's dashboard date.
+# Commit everything staged under one label. No change: no commit. A failed step stops the publish (set -e) and the
+# reset below, so restyle lines never fall into a report or content commit and move every page's dashboard date.
 commit() { git -C "$REPORTS_CONTENT_DIR" add -A; git -C "$REPORTS_CONTENT_DIR" diff --cached --quiet || git -C "$REPORTS_CONTENT_DIR" commit -qm "$1"; }
 # The reply box is layout too: a new box version reaches every page in the "restyle" commit (README "Reply").
 box() { "$here/bin/report-reply-box" "$REPORTS_CONTENT_DIR"; }
 # Edits already in the tree are content, not layout: commit them first. Then the stylesheet, the stamp and the box
 # are the "restyle" commit, and the new page is the "report" commit.
 commit "content: earlier uncommitted changes"
+# From here the tree holds only what this publish writes (stylesheet, stamps, box, page, dashboard), all made again
+# by a new run. A failed run resets it to the last commit, so stamps never wait to fall into a later "content" commit.
+reset() { git -C "$REPORTS_CONTENT_DIR" reset -q --hard HEAD; git -C "$REPORTS_CONTENT_DIR" clean -fdq; echo "publish failed: content tree reset to the last commit" >&2; }
+trap 'rc=$?; [ $rc -eq 0 ] || reset' EXIT
 cp "$here/tokens.css" "$REPORTS_CONTENT_DIR/_/tokens.css"; stamp; box; commit "restyle: stylesheet $v, reply box"
 cp "$file" "$dest/index.html"; box; stamp
 "$here/bin/report-index" "$REPORTS_CONTENT_DIR"; stamp  # dashboard at / and /_/by-repo/
 commit "report: $repo/$slug"
+trap - EXIT  # all committed; push and deploy failures leave nothing to reset
 git -C "$REPORTS_CONTENT_DIR" push -q origin HEAD || echo "warning: content backup push failed" >&2
 cd "$REPORTS_CONTENT_DIR"  # Pagecast writes .pagecast/ into the current directory
 DO_NOT_TRACK=1 PAGECAST_TELEMETRY=0 npx --yes pagecast@0.7.0 pages deploy "$REPORTS_CONTENT_DIR" --project "$REPORTS_PROJECT" --json >/dev/null
