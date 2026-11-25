@@ -48,7 +48,10 @@ for a second one in the same repo that night), where `<date>` is the date of the
 
 At 5:00 AM PT, `bin/report-morning build <content-dir> <date> <out.html>` collects all bed reports of that date into
 one page, `reports/morning-<date>/`. `bin/report-index` copies the newest morning report to `/morning/` and puts a
-link to it at the top of the dashboard. No bed reports: no page.
+link to it at the top of the dashboard. No bed reports: no page. The morning page is a snapshot at 5 AM. A session still working then is in it with
+status `working` (each session publishes its first bed report when it starts), and its card links to the live bed
+report; changes after 5 AM show only there. A session that starts after 5 AM has the next day's date, so it is in the
+next morning report.
 
 ## Reply
 

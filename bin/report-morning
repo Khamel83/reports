@@ -143,7 +143,8 @@ def render(rows, date, skipped=()):
 {cards}</div>
 </section>
 <footer class="meta">Made by <code>bin/report-morning</code> from the bed reports for {e(day)}. Each card repeats its report's own
-summary; open the report for the evidence. A status is what the session wrote last, not a check by this page.</footer>
+summary at the time of this build (5 AM PT); open the report for the evidence and for any later change. A status is
+what the session wrote last, not a check by this page.</footer>
 </main></body></html>
 """
 
