@@ -8,20 +8,23 @@ repo=$2 slug=$3 file=$4
 grep -q 'href="/_/tokens.css"' "$file" || { echo "report must link /_/tokens.css" >&2; exit 2; }
 here=$(cd "$(dirname "$0")/.." && pwd)
 dest="$REPORTS_CONTENT_DIR/$repo/$slug"; mkdir -p "$dest" "$REPORTS_CONTENT_DIR/_"
-cp "$here/tokens.css" "$REPORTS_CONTENT_DIR/_/tokens.css"
 # Browsers keep /_/tokens.css for hours (the host sends max-age=14400), so every page links it with a version.
 # A new stylesheet restamps all pages; that commit starts with "restyle", which the dashboard does not count as a change.
 v=$(cksum < "$here/tokens.css" | cut -d' ' -f1)
 stamp() { find "$REPORTS_CONTENT_DIR" -name index.html -not -path '*/.git/*' -exec \
   perl -pi -e 's{href="/_/tokens\.css(\?v=\w+)?"}{href="/_/tokens.css?v='"$v"'"}g' {} +; }
-# Edits already in the tree are content, not layout: commit them first, so the "restyle" commit holds only layout.
-git -C "$REPORTS_CONTENT_DIR" add -A && git -C "$REPORTS_CONTENT_DIR" commit -qm "content: earlier uncommitted changes" || true
-# The reply box is layout too: a new box version reaches every page in the same "restyle" commit (README "Reply").
+# Commit everything staged under one label. No change: no commit. A failed commit stops the publish (set -e), so
+# restyle lines can never fall into the report commit and move every page's dashboard date.
+commit() { git -C "$REPORTS_CONTENT_DIR" add -A; git -C "$REPORTS_CONTENT_DIR" diff --cached --quiet || git -C "$REPORTS_CONTENT_DIR" commit -qm "$1"; }
+# The reply box is layout too: a new box version reaches every page in the "restyle" commit (README "Reply").
 box() { "$here/bin/report-reply-box" "$REPORTS_CONTENT_DIR"; }
-stamp; box; git -C "$REPORTS_CONTENT_DIR" add -A && git -C "$REPORTS_CONTENT_DIR" commit -qm "restyle: stylesheet $v, reply box" || true
+# Edits already in the tree are content, not layout: commit them first. Then the stylesheet, the stamp and the box
+# are the "restyle" commit, and the new page is the "report" commit.
+commit "content: earlier uncommitted changes"
+cp "$here/tokens.css" "$REPORTS_CONTENT_DIR/_/tokens.css"; stamp; box; commit "restyle: stylesheet $v, reply box"
 cp "$file" "$dest/index.html"; box; stamp
 "$here/bin/report-index" "$REPORTS_CONTENT_DIR"; stamp  # dashboard at / and /_/by-repo/
-git -C "$REPORTS_CONTENT_DIR" add -A && git -C "$REPORTS_CONTENT_DIR" commit -qm "report: $repo/$slug" || true
+commit "report: $repo/$slug"
 git -C "$REPORTS_CONTENT_DIR" push -q origin HEAD || echo "warning: content backup push failed" >&2
 cd "$REPORTS_CONTENT_DIR"  # Pagecast writes .pagecast/ into the current directory
 DO_NOT_TRACK=1 PAGECAST_TELEMETRY=0 npx --yes pagecast@0.7.0 pages deploy "$REPORTS_CONTENT_DIR" --project "$REPORTS_PROJECT" --json >/dev/null
