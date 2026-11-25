@@ -1,6 +1,6 @@
 # Handoff
 
-Checkpoint: Nov 24, 2026, 11:55 PM PT. Host and deploy path are in `INFRA.md`; the credential name and location are in Infra's private records.
+Checkpoint: Nov 25, 2026, 12:17 AM PT. Host and deploy path are in `INFRA.md`; the credential name and location are in Infra's private records.
 
 ## Done and live
 
@@ -10,22 +10,23 @@ Checkpoint: Nov 24, 2026, 11:55 PM PT. Host and deploy path are in `INFRA.md`; t
 - Stylesheet version and one-publish-at-a-time lock (#9): merged Nov 24, 2026, 11:30 PM PT after the reviewer's PASS.
   `bin/report` stamps `?v=<checksum>` on the stylesheet link in every page.
 - Janitor docs (#7): merged 11:19 PM PT after the reviewer's PASS.
+- Reply box (#10): merged 11:50 PM PT. Bed skill and morning report (#11): merged Nov 25, 12:12 AM PT; it also fixed
+  main CI, red since #10 (the reply Worker's stalled-inbox test ended early on Node 22). Main CI passed on the #11
+  merge commit `f2af4c9`: https://github.com/Khamel83/reports/actions/runs/45574338718.
 - Rule "owner-readable output, plans included, goes out as a report link": README and the publishing skill.
 
 ## In flight
 
-- Bed night Nov 24 to 25 (goal: land #7, #9, #10, #11). Report: https://reports.khamel.com/reports/bed-2026-11-25/.
-  #7, #9 and #10 are merged (#10 by its own session, 11:50 PM PT, reviewer PASS). #11 waits for its reviewer PASS.
-  Recheck: `gh pr list`.
-- Bed (R-8): PR #11 from branch `bed`. The Mac parts (the `bed` skill, its morning job at 5:00 AM PT, the log and the
-  macOS disk-access note) are installed on the Mac and described in the skill itself, not here. No #inbox message
-  (owner decision): the newest morning report is at `/morning/` and on top of the dashboard. The reports checkout on
-  the Mac must stay on `bed`, or on `main` after the merge, because the job and every publish run from it.
+- Bed night Nov 24 to 25: all four PRs (#7, #9, #10, #11) merged. Report: https://reports.khamel.com/reports/bed-2026-11-25/.
+- Bed (R-8): the Mac parts (the `bed` skill, its morning job at 5:00 AM PT, the log and the macOS disk-access note)
+  are installed on the Mac and described in the skill, not here. The reports checkout on the Mac is on `main`; keep
+  it there, because the job and every publish run from it. Next check: the 5 AM run on Nov 25 (`/morning/` changes,
+  log ends with "live:").
 
-- R-4 reply box (#10, merged Nov 24, 2026, 11:50 PM PT). **Live and verified:** Worker `reports-reply` has its inbox secret since Nov 24,
+- R-4 reply box (#10). **Live and verified:** Worker `reports-reply` has its inbox secret since Nov 24,
   2026, 10:50 PM PT (deployed from this branch), after the Factory intake change for `reports` items and the Dispatch
   exclusion were deployed. Nov 24, 10:52 PM PT the owner pressed "Works" on `/reports/r4-reply-box/`; Factory made one
-  task, DO-894, with the page link, choice and text, at 10:55 PM PT. Way back: delete the Worker's inbox secret
+  task with the page link, choice and text, at 10:55 PM PT. Way back: delete the Worker's inbox secret
   (binding name in `bin/reply-deploy`); every reply then answers "Not confirmed".
   Known effect: the first R-4 publish put the box in a "report" commit, so five older pages show Nov 24 10:00 PM PT
   on the dashboard (same day). `bin/report` now adds the box in the "restyle" commit.
