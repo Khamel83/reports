@@ -173,7 +173,8 @@ class Clean(HTMLParser):
         if classes:
             keep += f' class="{" ".join(classes)}"'
         href = attrs.get("href") or ""
-        if tag == "a" and re.match(r"(https://|/(?![/\\]))[^\s\"'<>\\]*\Z", href):
+        # No backslash, space or control character anywhere: a browser reads "/\host" as "//host" (another site).
+        if tag == "a" and re.match(r"(https://|/(?![/\\]))[^\s\"'<>\\\x00-\x1f\x7f]*\Z", href):
             keep += f' href="{html.escape(href)}"'
         if tag == "section":  # a section is always top level, so render can split the fragment on it safely
             while self.open:

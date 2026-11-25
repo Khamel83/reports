@@ -158,7 +158,8 @@ class Analysis(unittest.TestCase):
         self.assertIn('<a href="https://github.com/Khamel83/g2k/pull/1">ok</a>', out)
         self.assertIn('<a href="/g2k/bed-2026-11-25/">r</a>', out)
         self.assertIn("<a>bad2</a>", out)
-        for href in ("/\\evil.example/", "https://x/\\y", "/a b"):
+        for href in ("/\\evil.example/", "https://x/\\y", "/a b", "/&#92;evil.example/", "/\x01/evil.example/",
+                     "/a\x7fb", "HTTPS://x/", " /x"):
             self.assertEqual(rm.clean(f'<h2>h</h2><a href="{href}">x</a>'), "<h2>h</h2><a>x</a>")
         self.assertEqual(rm.clean('<script><a href="/r/">in</a></script><h2>after</h2>'), "<h2>after</h2>")
         self.assertIn("1 &lt; 2 &amp; <b>open</b></p>", out)
