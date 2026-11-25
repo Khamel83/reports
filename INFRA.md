@@ -9,6 +9,7 @@ OCI) are public facts, not secrets: the host is behind the access gate.
 |---|---|
 | Live host | `reports.khamel.com`, a Cloudflare Pages project |
 | Access | Cloudflare Access: Google login, owner only. The provider's default addresses are gated too |
+| Security model | One gate at the edge (owner rule): Access covers the whole host, `/_/reply*` included, with no bypass path. Inside the gate there is no second auth check, so the reply Worker reads the gate's identity header and does not verify the Access token. Accepted residual risk: an Access bypass rule added later on `/_/reply*` would let a forged header write to the inbox; do not add one |
 | Content | A private content repo (one `<repo>/<slug>/index.html` for each page, `/_/tokens.css`, the dashboard pages) |
 | Publish | `bin/report publish <repo> <slug> <file.html>`: stamp, index, commit, push, `pagecast pages deploy` |
 | Caller on the Mac | The `report` skill (`publish.sh`): sets the content path and project, reads the token with `sops` |

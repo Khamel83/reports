@@ -2,7 +2,8 @@
 """Turn a finished task's markdown result into a report page, publish it, reply in the Slack thread.
 
 stdin : JSON {identifier, title, ticket_url, transcript_id, result_markdown, kind (optional, default report),
-        choices (optional list: answer buttons in the reply box)}
+        choices (optional list: answer buttons in the reply box; at most 6, a "|" in a
+        label becomes "/", each label is cut to 80 characters, and the reply saves the label as shown)}
 stdout: last line JSON {url, slack_ts, slack}
 env   : REPORTS_CONTENT_DIR REPORTS_PROJECT CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID (see bin/report)
         REPORTS_HOST (default reports.khamel.com)  REPORTS_REPO (default factory)

@@ -139,3 +139,11 @@ test("a stalled inbox ends in not confirmed with the text back", async () => {
   assert.equal(response.status, 502);
   assert.match(await response.text(), /still there/);
 });
+
+test("a body over the size limit is refused before it is read", async () => {
+  const { calls, env } = inbox({ ok: true, drop_id: "2602" });
+  const headers = { "Cf-Access-Authenticated-User-Email": "owner", Origin: `https://${HOST}`, "Content-Length": "70000" };
+  const response = await worker.fetch(new Request(`https://${HOST}/_/reply`, { method: "POST", body: "x", headers }), env);
+  assert.equal(response.status, 413);
+  assert.equal(calls.length, 0);
+});

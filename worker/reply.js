@@ -14,6 +14,7 @@ const NAME = /^[a-z0-9][a-z0-9._-]{0,63}$/;
 const SLUG = /^[a-z0-9][a-z0-9-]{0,127}$/;
 const ID = /^[A-Za-z0-9-]{1,80}$/;
 export const INBOX_WAIT_MS = 10000;
+const MAX_BODY = 65536;  // all fields at their limits, percent-encoded, stay under about 40 KB
 const LIMITS = { text: 4000, choice: 80, ticket: 64, title: 200 };
 
 // One reply = one id: the same page, choice and text give the same id, so a double click or a retry is one reply.
@@ -99,6 +100,9 @@ export default {
       return page(403, "Not sent", "This reply did not come from a signed-in report page.", "/");
     }
 
+    if (Number(request.headers.get("Content-Length") || 0) > MAX_BODY) {  // refuse before the body is read
+      return page(413, "Not sent", "The reply is too long. Go back and shorten it.", "/");
+    }
     let form;
     try {
       form = await request.formData();
