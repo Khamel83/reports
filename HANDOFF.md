@@ -1,6 +1,6 @@
 # Handoff
 
-Checkpoint: Nov 24, 2026, 8:50 PM PT. Host, deploy path and credential location are in `INFRA.md`.
+Checkpoint: Nov 24, 2026, 8:50 PM PT. Host and deploy path are in `INFRA.md`; the credential name and location are in Infra's private records.
 
 ## Done and live
 
