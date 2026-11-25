@@ -14,6 +14,8 @@ cp "$here/tokens.css" "$REPORTS_CONTENT_DIR/_/tokens.css"
 v=$(cksum < "$here/tokens.css" | cut -d' ' -f1)
 stamp() { find "$REPORTS_CONTENT_DIR" -name index.html -not -path '*/.git/*' -exec \
   perl -pi -e 's{href="/_/tokens\.css(\?v=\w+)?"}{href="/_/tokens.css?v='"$v"'"}g' {} +; }
+# Edits already in the tree are content, not layout: commit them first, so the "restyle" commit holds only the stamp.
+git -C "$REPORTS_CONTENT_DIR" add -A && git -C "$REPORTS_CONTENT_DIR" commit -qm "content: earlier uncommitted changes" || true
 stamp; git -C "$REPORTS_CONTENT_DIR" add -A && git -C "$REPORTS_CONTENT_DIR" commit -qm "restyle: stylesheet $v" || true
 cp "$file" "$dest/index.html"; stamp
 "$here/bin/report-index" "$REPORTS_CONTENT_DIR"; stamp  # dashboard at / and /_/by-repo/
