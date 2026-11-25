@@ -29,8 +29,13 @@ def text(fragment):
 
 
 def meta(page, name):
-    found = re.search(rf'<meta name="{re.escape(name)}" content="([^"]*)"', page)
-    return html.unescape(found.group(1)).strip().lower() if found else ""
+    """Content of <meta name=...>, with attributes in any order and either quote."""
+    for tag in re.findall(r"<meta\b[^>]*>", page, re.I):
+        attrs = {k.lower(): v1 if v1 is not None else v2 for k, v1, v2 in
+                 ((m[0], m[1] or None, m[2]) for m in re.findall(r'([\w:-]+)\s*=\s*(?:"([^"]*)"|\'([^\']*)\')', tag))}
+        if attrs.get("name", "").lower() == name:
+            return html.unescape(attrs.get("content", "")).strip().lower()
+    return ""
 
 
 def changed(root, rel):
@@ -57,6 +62,8 @@ def collect(root, date):
                 continue
             page = open(path, encoding="utf-8").read()
             if meta(page, "report:kind") != "bed":
+                print(f"warning: {rel}: a bed-dated page without <meta name=\"report:kind\" content=\"bed\">; "
+                      "not in the morning report", file=sys.stderr)
                 continue
             title = re.search(r"<title>(.*?)</title>", page, re.S)
             lede = re.search(r'<p class="lede">(.*?)</p>', page, re.S)

@@ -72,6 +72,20 @@ class Build(unittest.TestCase):
         self.assertIn("do not match the bed markup", err.getvalue())
         self.assertIn("Not counted: 1 ask cards or numbers in alpha", rm.render(rows, "2026-11-25"))
 
+    def test_meta_in_any_attribute_order(self):
+        self.put("alpha", "bed-2026-11-25", "<meta content='bed' name='report:kind'>"
+                 "<meta  content=\"blocked\"  name=\"bed:status\">")
+        rows = rm.collect(self.root, "2026-11-25")
+        self.assertEqual([r["status"] for r in rows], ["blocked"])
+
+    def test_bed_dated_page_of_another_kind_warns(self):
+        import contextlib, io
+        self.put("alpha", "bed-2026-11-25", page(kind="report"))
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            self.assertEqual(rm.collect(self.root, "2026-11-25"), [])
+        self.assertIn("not in the morning report", err.getvalue())
+
     def test_impossible_date_is_refused(self):
         self.assertFalse(rm.real_date("2026-02-30"))
         self.assertTrue(rm.real_date("2026-11-25"))

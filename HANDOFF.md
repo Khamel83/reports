@@ -1,6 +1,6 @@
 # Handoff
 
-Checkpoint: Nov 24, 2026, 11:40 PM PT. Host and deploy path are in `INFRA.md`; the credential name and location are in Infra's private records.
+Checkpoint: Nov 24, 2026, 11:55 PM PT. Host and deploy path are in `INFRA.md`; the credential name and location are in Infra's private records.
 
 ## Done and live
 
@@ -15,8 +15,8 @@ Checkpoint: Nov 24, 2026, 11:40 PM PT. Host and deploy path are in `INFRA.md`; t
 ## In flight
 
 - Bed night Nov 24 to 25 (goal: land #7, #9, #10, #11). Report: https://reports.khamel.com/reports/bed-2026-11-25/.
-  #7 and #9 are merged. #10 had a push from its own session at 11:32 PM PT, so it is left alone until it is quiet
-  for 1 hour. Recheck: `gh pr list`; `git log -1 --format=%cd origin/feat/r4-reply-box`.
+  #7, #9 and #10 are merged (#10 by its own session, 11:50 PM PT, reviewer PASS). #11 waits for its reviewer PASS.
+  Recheck: `gh pr list`.
 - Bed (R-8): PR #11 from branch `bed`. The Mac parts (the `bed` skill, its morning job at 5:00 AM PT, the log and the
   macOS disk-access note) are installed on the Mac and described in the skill itself, not here. No #inbox message
   (owner decision): the newest morning report is at `/morning/` and on top of the dashboard. The reports checkout on
