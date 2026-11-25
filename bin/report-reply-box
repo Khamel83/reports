@@ -9,13 +9,15 @@ box version reaches every page. The dashboard pages (/ and everything under /_/)
 Answer buttons come from <meta name="report:choices" content="A|B">: one button for each choice, at most 6.
 """
 import html
+import subprocess
 import os
 import re
 import sys
 
 START, END = "<!-- reply-box -->", "<!-- /reply-box -->"
-NAME = re.compile(r"[a-z0-9][a-z0-9._-]*\Z")
-SLUG = re.compile(r"[a-z0-9][a-z0-9-]*\Z")
+NAME = re.compile(r"[a-z0-9][a-z0-9._-]{0,63}\Z")  # the Worker's limits: a page it refuses gets no box
+SLUG = re.compile(r"[a-z0-9][a-z0-9-]{0,127}\Z")
+STAMP = re.compile(r'(href="/_/tokens\.css)\?v=\w+"')
 OLD = re.compile(re.escape(START) + r".*?" + re.escape(END) + r"\n?", re.S)
 
 
@@ -25,14 +27,21 @@ def meta(page, name):
     return html.unescape(found.group(1)) if found else ""
 
 
+def cut(text, limit):
+    """At most limit UTF-16 units, as the Worker counts (JavaScript string length)."""
+    while len(text.encode("utf-16-le")) // 2 > limit:
+        text = text[:-1]
+    return text
+
+
 def box(page, repo, slug):
     title = re.search(r"<title>(.*?)</title>", page, re.S)
-    fields = dict(repo=repo, slug=slug, ticket=meta(page, "ticket")[:64],
-                  title=html.unescape(title.group(1)).strip()[:200] if title else "")
+    fields = dict(repo=repo, slug=slug, ticket=cut(meta(page, "ticket"), 64),
+                  title=cut(html.unescape(title.group(1)).strip(), 200) if title else "")
     hidden = "".join(f'<input type="hidden" name="{key}" value="{html.escape(value)}">'
                      for key, value in fields.items())
     choices = [c.strip() for c in meta(page, "choices").split("|") if c.strip()][:6]
-    buttons = "".join(f'<button class="choice" name="choice" value="{html.escape(c[:80])}">{html.escape(c[:80])}</button>'
+    buttons = "".join(f'<button class="choice" name="choice" value="{html.escape(cut(c, 80))}">{html.escape(cut(c, 80))}</button>'
                       for c in choices)
     return (f'{START}\n<section class="reply" id="reply">\n<h2>Reply</h2>\n'
             f'<form method="post" action="/_/reply">{hidden}\n'
@@ -72,7 +81,27 @@ def main(root):
     return changed
 
 
+def layout_only(root):
+    """True when every uncommitted change differs from HEAD only by the box and the stylesheet stamp (a killed run)."""
+    git = lambda *a: subprocess.run(["git", "-C", root, "-c", "core.quotePath=false", *a],
+                                    capture_output=True, text=True)
+    plain = lambda page: STAMP.sub(r'\1"', OLD.sub("", page))
+    paths = [line[3:] for line in git("status", "--porcelain", "--untracked-files=all").stdout.splitlines()]
+    for path in paths:
+        if path == "_/tokens.css":
+            continue
+        old = git("show", "HEAD:" + path)
+        if not path.endswith("index.html") or old.returncode != 0 or not os.path.isfile(os.path.join(root, path)):
+            return False
+        with open(os.path.join(root, path), encoding="utf-8") as stream:
+            if plain(stream.read()) != plain(old.stdout):
+                return False
+    return bool(paths)
+
+
 if __name__ == "__main__":
+    if len(sys.argv) == 3 and sys.argv[1] == "--layout-only":
+        sys.exit(0 if layout_only(sys.argv[2]) else 1)
     if len(sys.argv) != 2:
-        sys.exit("usage: report-reply-box <content-dir>")
+        sys.exit("usage: report-reply-box <content-dir> | report-reply-box --layout-only <content-dir>")
     print(f"reply box: {main(sys.argv[1])} page(s) changed", file=sys.stderr)

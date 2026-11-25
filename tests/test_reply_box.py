@@ -2,6 +2,7 @@
 import importlib.machinery
 import importlib.util
 import os
+import subprocess
 import tempfile
 import unittest
 
@@ -50,6 +51,27 @@ class ReplyBox(unittest.TestCase):
     def test_no_main_keeps_an_existing_box(self):
         page = box.apply(PAGE, "infra", "x").replace("</main>", "")
         self.assertEqual(box.apply(page, "infra", "x"), page)
+
+    def test_limits_follow_the_worker(self):
+        self.assertEqual(box.cut("\U0001F600" * 150, 200), "\U0001F600" * 100)
+        self.assertIsNone(box.SLUG.match("a" * 129))
+
+    def test_layout_only_sees_box_and_stamp_but_not_text(self):
+        with tempfile.TemporaryDirectory() as root:
+            git = lambda *a: subprocess.run(["git", "-C", root, *a], check=True, capture_output=True)
+            os.makedirs(os.path.join(root, "infra", "x"))
+            path = os.path.join(root, "infra", "x", "index.html")
+            first = PAGE.replace("</title>", '</title><link rel="stylesheet" href="/_/tokens.css?v=1">')
+            with open(path, "w") as stream:
+                stream.write(first)
+            git("init", "-q"); git("add", "-A"); git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "x")
+            self.assertFalse(box.layout_only(root))
+            with open(path, "w") as stream:
+                stream.write(box.apply(first.replace("?v=1", "?v=2"), "infra", "x"))
+            self.assertTrue(box.layout_only(root))
+            with open(path, "a") as stream:
+                stream.write("<p>new text</p>")
+            self.assertFalse(box.layout_only(root))
 
     def test_tree_skips_dashboard_pages(self):
         with tempfile.TemporaryDirectory() as root:
