@@ -50,8 +50,9 @@ def changed(root, rel):
     return datetime.fromtimestamp(stamp or os.path.getmtime(os.path.join(root, rel)), PT)
 
 
-def collect(root, date):
-    rows = []
+def collect(root, date, skipped=None):
+    """Bed reports of that date. Bed-dated pages that are not read go to `skipped` as (path, reason)."""
+    rows, skipped = [], skipped if skipped is not None else []
     for repo in sorted(os.listdir(root)):
         if not NAME.match(repo) or not os.path.isdir(os.path.join(root, repo)):
             continue
@@ -65,10 +66,12 @@ def collect(root, date):
                     page = handle.read()
             except UnicodeDecodeError:
                 print(f"warning: {rel}: not UTF-8; not in the morning report", file=sys.stderr)
+                skipped.append((f"/{repo}/{slug}/", "not UTF-8"))
                 continue
             if meta(page, "report:kind") != "bed":
                 print(f"warning: {rel}: a bed-dated page without <meta name=\"report:kind\" content=\"bed\">; "
                       "not in the morning report", file=sys.stderr)
+                skipped.append((f"/{repo}/{slug}/", "no bed kind tag"))
                 continue
             title = re.search(r"<title>(.*?)</title>", page, re.S)
             lede = re.search(r'<p class="lede">(.*?)</p>', page, re.S)
@@ -95,7 +98,7 @@ def counts(rows):
     return by, sum(len(r["asks"]) for r in rows)
 
 
-def render(rows, date):
+def render(rows, date, skipped=()):
     e = html.escape
     by, asks = counts(rows)
     day = datetime.strptime(date, "%Y-%m-%d").strftime("%A, %B %-d")
@@ -114,6 +117,8 @@ def render(rows, date):
     warning = (f'<p class="note">Not counted: {sum(r["unread"] for r in unread)} ask cards or numbers in '
                f'{", ".join(e(r["repo"]) for r in unread)} do not match the bed markup. Open those reports.</p>\n'
                if unread else "")
+    warning += "".join(f'<p class="note">Not read: <a href="{e(path)}">{e(path)}</a> ({e(why)}). '
+                       f'It is not in the counts above.</p>\n' for path, why in skipped)
     needs = (f'<section>\n<h2>Needs you</h2>\n{warning}{ask_cards}</section>\n' if ask_cards or warning else "")
     return f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -124,7 +129,7 @@ def render(rows, date):
 <header class="hero">
 <p class="kicker">reports · bed · {e(date)}</p>
 <h1>While you slept</h1>
-<p class="lede">{len(rows)} projects worked overnight: {by["done"]} done, {by["working"]} still working, {by["blocked"]} blocked{f', {by["unknown"]} with no status' if by["unknown"] else ""}. {asks} things need you.</p>
+<p class="lede">{len(rows)} projects worked overnight: {by["done"]} done, {by["working"]} still working, {by["blocked"]} blocked{f', {by["unknown"]} with no status' if by["unknown"] else ""}. {asks} things need you.{f' {len(skipped)} bed pages could not be read (see Needs you).' if skipped else ""}</p>
 <div class="stats">
 <div class="stat"><b>{len(rows)}</b>projects</div>
 <div class="stat"><b>{by["done"]}</b>done</div>
@@ -169,12 +174,13 @@ def main():
             else:
                 print("a publish holds the lock for 5 minutes; giving up", file=sys.stderr)
                 sys.exit(4)
-            rows = collect(args[1], args[2])
-        if not rows:
+            skipped = []
+            rows = collect(args[1], args[2], skipped)
+        if not rows and not skipped:
             print(f"no bed reports for {args[2]}", file=sys.stderr)
             sys.exit(3)
         with open(args[3], "w", encoding="utf-8") as handle:
-            handle.write(render(rows, args[2]))
+            handle.write(render(rows, args[2], skipped))
     else:
         print(__doc__.split("\n\n")[1], file=sys.stderr)
         sys.exit(2)

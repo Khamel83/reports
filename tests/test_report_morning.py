@@ -82,9 +82,12 @@ class Build(unittest.TestCase):
         import contextlib, io
         self.put("alpha", "bed-2026-11-25", page(kind="report"))
         err = io.StringIO()
+        skipped = []
         with contextlib.redirect_stderr(err):
-            self.assertEqual(rm.collect(self.root, "2026-11-25"), [])
+            self.assertEqual(rm.collect(self.root, "2026-11-25", skipped), [])
         self.assertIn("not in the morning report", err.getvalue())
+        self.assertEqual(skipped, [("/alpha/bed-2026-11-25/", "no bed kind tag")])
+        self.assertIn("Not read: <a href=\"/alpha/bed-2026-11-25/\">", rm.render([], "2026-11-25", skipped))
 
     def test_non_utf8_page_is_skipped(self):
         os.makedirs(os.path.join(self.root, "alpha", "bed-2026-11-25"))
