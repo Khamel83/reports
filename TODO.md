@@ -14,8 +14,8 @@
 
 ## Done
 
-- [x] R-7 Version the stylesheet link at publish: https://github.com/Khamel83/reports/pull/9. Live from the branch
-      since Nov 24, 2026, 8:39 PM PT (content commit `fe5ec7f`); the merge of #9 closes it.
+- [x] R-7 Version the stylesheet link at publish: https://github.com/Khamel83/reports/pull/9. Done in effect: live from the
+      branch since Nov 24, 2026, 8:39 PM PT (content commit `fe5ec7f`). The merge of #9 only moves the source to main.
 
 - [x] Design v2, dashboard, `report:kind`, plans as reports: https://github.com/Khamel83/reports/pull/6, live
       Nov 24, 2026, 8:32 PM PT, accepted by the owner.
