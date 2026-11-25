@@ -1,3 +1,21 @@
 <!-- janitor:begin:todo -->
 - No explicit open TODO items are established by the supplied published evidence. Commit summaries describe past activity, not open tasks.
 <!-- janitor:end:todo -->
+
+## Open
+
+- [ ] R-1 Factory calls `bin/report-from-task` automatically at the end of a task (today a session runs it by hand).
+- [ ] R-2 Agents on Homelab and OCI can publish a report or plan directly (the `report` skill is on the Mac only).
+- [ ] R-3 Pages from the visual-explainer plugin publish in this design (they do not link `/_/tokens.css`, so
+      `bin/report` refuses them).
+- [ ] R-4 Reply box on each page, with a Worker that sends the reply to the agent.
+- [ ] R-5 Slack thread link on every Penny note.
+- [ ] R-6 Look at light mode and at a real phone after design v2 (the owner uses dark mode; tokens only).
+- [ ] R-7 Version the stylesheet link at publish: https://github.com/Khamel83/reports/pull/9 (live from the branch).
+
+## Done
+
+- [x] Design v2, dashboard, `report:kind`, plans as reports: https://github.com/Khamel83/reports/pull/6, live
+      Nov 24, 2026, 8:32 PM PT, accepted by the owner.
+- [x] Shared agent rule for report links: https://github.com/Khamel83/infra/pull/2421 (merged).
+

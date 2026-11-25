@@ -13,3 +13,5 @@
   The same rule is in the shared agent rules (Khamel83/infra#2421, merged) and in the `report` skill on the Mac.
 - Nov 24, 2026: `reports.khamel.com/` is a dashboard of all pages, newest first, by day or by repo, with kind, repo,
   title, link and date for each page.
+- Nov 24, 2026, about 8:40 PM PT: the owner saw design v2 live and accepted it ("MUCH better ... keep this up").
+  His first view was broken: his browser held the old stylesheet. Cause and fix are in `INFRA.md` (Cache).

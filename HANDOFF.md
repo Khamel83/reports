@@ -1,26 +1,30 @@
 # Handoff
-Live host `reports.khamel.com` (Pages project `reports-khamel`, Cloudflare Access app "Reports", Google login, owner
-email; `*.pages.dev` addresses also gated). Publish token `reports-pages-publish` (Pages Write only) is in Infra's
-vault `secrets/reports-cloudflare.env.encrypted`. The `report` skill on the Mac calls `bin/report`.
 
-Nov 24, 2026, design v2: `tokens.css` is dark first with full-width bands; `DESIGN.md` lists the parts (hero, stats,
-cards, ask, steps, flow, timeline); `template/report.html` and `bin/report-from-task` write `header.hero` plus one
-`section` for each `h2`. Pages link the shared `/_/tokens.css`, so every page takes the new look when it deploys.
-Dashboard: `bin/report` runs `bin/report-index` at each publish. It writes `/` (by day) and `/_/by-repo/` (by repo)
-from each page's `report:kind` meta tag, folder, `<title>` and last commit time in the content repo.
-Recheck: serve the content repo locally, open a page in headless Chrome with `--force-dark-mode` at 1440 px and in a
-390 px iframe.
+Checkpoint: Nov 24, 2026, 8:50 PM PT. Host, deploy path and credential location are in `INFRA.md`.
 
-Live since Nov 24, 2026, 8:32 PM PT (content commit `a711dea`): the new look, the dashboard and the five old pages in
-the hero + section layout with a `report:kind` tag. Seen in the owner's Chrome at `/` and `/float/whats-left/`.
-The shared agent rule "owner-readable output goes out as a report link" merged as Khamel83/infra#2421; it was not yet
-in `~/.agents/shared-rules.md` on the Mac at 8:35 PM PT (Infra's rules sync installs it).
+## Done and live
 
-Stylesheet cache: the host serves `/_/tokens.css` with `max-age=14400`, so a browser that had the old file showed
-new pages with the old stylesheet (owner report, Nov 24, 8:37 PM PT). `bin/report` now stamps `?v=<checksum>` on
-the link in every page; a restamp commits as `restyle: ...`, which the dashboard does not count as a change.
+- Design v2 (#6): dark first, full-width bands, parts in `DESIGN.md`. The owner saw it live and accepted it
+  ("MUCH better", Nov 24, about 8:40 PM PT).
+- Dashboard (#6): `/` by day, `/_/by-repo/` by repo. `bin/report` runs `bin/report-index` at each publish.
+- The five pages published before design v2 have the hero + section layout and a `report:kind` tag; words unchanged.
+- Stylesheet version (#9): `bin/report` stamps `?v=<checksum>` on the stylesheet link in every page. Live from the
+  branch since 8:39 PM PT (content commit `fe5ec7f`); all seven live pages carry `?v=2496485213`.
+- Rule "owner-readable output, plans included, goes out as a report link": README, the `report` skill on the Mac,
+  and the shared agent rules (Khamel83/infra#2421, merged).
 
-Open: the `report` skill and its publish path exist on the Mac only (Homelab and OCI agents reach reports through
-Factory); pages from the visual-explainer plugin do not link `/_/tokens.css`, so `bin/report` refuses them;
-Open: reply box + Worker, Factory step that calls `bin/report` automatically, Slack thread link on every Penny note,
-light mode not looked at after design v2 (tokens only; the owner uses dark).
+## In flight
+
+- #9 waits for the reviewer bot. After the merge: `git checkout main && git pull --ff-only`, delete the branch.
+- The shared rule from infra#2421 was not in `~/.agents/shared-rules.md` on the Mac at 8:50 PM PT. Infra's rules
+  sync installs it. Check: `grep -c "report link" ~/.agents/shared-rules.md` (expect 1).
+
+## Recheck
+
+- Look: serve the content repo locally (`python3 -m http.server` in a copy that has `_/tokens.css`), open a page in
+  headless Chrome with `--force-dark-mode` at 1440 px and in a 390 px iframe.
+- Live: the host needs the owner's Google login; `curl -s -o /dev/null -w "%{http_code}" https://reports.khamel.com/`
+  gives 302 without it. In the owner's browser, each page must link `/_/tokens.css?v=<checksum>`.
+- A design change must be tested in a browser that already has the old stylesheet, or by the `?v=` value in the page.
+
+Open work is in `TODO.md`.
