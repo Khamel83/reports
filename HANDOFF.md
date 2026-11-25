@@ -1,6 +1,6 @@
 # Handoff
 
-Checkpoint: Nov 24, 2026, 8:50 PM PT. Host and deploy path are in `INFRA.md`; the credential name and location are in Infra's private records.
+Checkpoint: Nov 24, 2026, 10:50 PM PT. Host and deploy path are in `INFRA.md`; the credential name and location are in Infra's private records.
 
 ## Done and live
 
@@ -19,7 +19,7 @@ Checkpoint: Nov 24, 2026, 8:50 PM PT. Host and deploy path are in `INFRA.md`; th
   box and the Worker answers on `/_/reply*` behind the access gate (no login: 302).
   **Paused on purpose:** the Worker has no inbox secret, so every reply answers "Not confirmed" and shows the text
   again. Reason: the installed Factory intake moves past `reports` items, so a reply sent now would be lost.
-  Trigger: the Factory intake change (Khamel83/factory#648) deployed. Restore: `bin/reply-deploy` with the inbox
+  Trigger: the Factory intake change for `reports` items deployed (its PR is in Infra's TODO). Restore: `bin/reply-deploy` with the inbox
   token set (names, vault paths and exact steps are in Infra's TODO, "A2UI trial and reports R-4"). Then the owner
   presses "Works" on `/reports/r4-reply-box/`; check one Factory task with the page link. Decide by Nov 27, 2026.
   Known effect: the first R-4 publish put the box in a "report" commit, so five older pages show Nov 24 10:00 PM PT

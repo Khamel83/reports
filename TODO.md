@@ -9,8 +9,8 @@
 - [ ] R-3 Pages from the visual-explainer plugin publish in this design (they do not link `/_/tokens.css`, so
       `bin/report` refuses them).
 - [ ] R-4 Reply box on each page, with a Worker that sends the reply to the agent. Box and Worker are deployed
-      but paused; replies work after the Factory intake change (Khamel83/factory#648) is deployed (see HANDOFF.md).
-      The Dispatch exclusion is merged (Khamel83/dispatch#215).
+      but paused; replies work after the Factory intake change for `reports` items is deployed (see HANDOFF.md).
+      The Dispatch exclusion for `reports` items is merged.
 - [ ] R-5 Slack thread link for every report that answers a voice note.
 - [ ] R-6 Look at light mode and at a real phone after design v2 (the owner uses dark mode; tokens only).
 
