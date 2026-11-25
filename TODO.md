@@ -15,7 +15,9 @@
       `/reports/morning-2026-11-25/` (exit 0). The first scheduled run (Nov 25, 5:00 AM PT) started on time but hung 30
       minutes in its first `git pull`: on the Mac's project disk a hard link hung for every program. I stopped it and ran
       the same script by hand; `/morning/` was published 5:54 AM PT. The job now writes git objects without hard links
-      and stops after 30 minutes (details in the `bed` skill). Open: one scheduled 5 AM run that ends with "live:".
+      and stops after 30 minutes (details in the `bed` skill). Nov 25 (owner): the morning page must think across all bed reports, not list them;
+      `bin/report-morning prompt` and `build --analysis` with one G2K request. Open: one scheduled 5 AM run that ends
+      with "live:" and has the analysis.
 - [ ] R-6 Look at light mode and at a real phone after design v2 (the owner uses dark mode; tokens only).
 
 ## Done
