@@ -13,6 +13,10 @@ Checkpoint: Nov 24, 2026, 8:50 PM PT. Host and deploy path are in `INFRA.md`; th
 
 ## In flight
 
+- Bed night Nov 24 to 25 (goal: land #7, #9, #10, #11). Report: https://reports.khamel.com/reports/bed-2026-11-25/.
+  At 11:06 PM PT #9 and #10 had pushes from their own sessions (less than 1 hour old), so they are left alone until quiet.
+  Recheck: `gh pr list`; `for b in stylesheet-version feat/r4-reply-box; do git log -1 --format=%cd origin/$b; done`.
+
 - Bed (R-8): PR #11 from branch `bed` (stacked on #9). The Mac parts are installed: skill `~/.agents/skills/bed`
   (`/bed`), `morning.sh`, launchd `com.khamel.bed-morning` at 5:00 AM PT. No #inbox message (owner decision): the newest
   morning report is at `/morning/` and on top of the dashboard. The reports
