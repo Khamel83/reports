@@ -7,11 +7,13 @@ A bed report is the page <repo>/bed-<date>[-<topic>]/index.html with <meta name=
 <date> is the date of the morning the owner reads it (see the bed skill). Its <meta name="bed:status"> is
 done, working or blocked. Each `.card.ask` h3 is one thing the owner must do.
 """
+import fcntl
 import html
 import os
 import re
 import subprocess
 import sys
+import time
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -59,14 +61,19 @@ def collect(root, date):
             title = re.search(r"<title>(.*?)</title>", page, re.S)
             lede = re.search(r'<p class="lede">(.*?)</p>', page, re.S)
             status = meta(page, "bed:status")
+            asks = [text(h) for h in re.findall(r'<div class="card ask">\s*<h3>(.*?)</h3>', page, re.S)]
+            stats = [(text(b), text(label)) for b, label in
+                     re.findall(r'<div class="stat"><b>(.*?)</b>(.*?)</div>', page, re.S)]
+            if len(asks) != len(re.findall(r'class="card ask', page)) or \
+                    len(stats) != len(re.findall(r'class="stat"', page)):
+                print(f"warning: {rel}: an ask card or a stat does not match the bed markup; "
+                      "the morning page can miss it", file=sys.stderr)
             rows.append(dict(
                 repo=repo, path=f"/{repo}/{slug}/",
                 title=text(title.group(1)) if title else slug,
                 lede=text(lede.group(1)) if lede else "",
                 status=status if status in STATUS_TAG else "unknown",
-                stats=[(text(b), text(label)) for b, label in
-                       re.findall(r'<div class="stat"><b>(.*?)</b>(.*?)</div>', page, re.S)],
-                asks=[text(h) for h in re.findall(r'<div class="card ask">\s*<h3>(.*?)</h3>', page, re.S)],
+                stats=stats, asks=asks,
                 when=changed(root, rel)))
     return rows
 
@@ -123,7 +130,18 @@ summary; open the report for the evidence. A status is what the session wrote la
 def main():
     args = sys.argv[1:]
     if len(args) == 4 and args[0] == "build" and DATE.match(args[2]):
-        rows = collect(args[1], args[2])
+        # Read under bin/report's publish lock, so a publish that fails and resets the tree is never half-read.
+        with open(os.path.join(args[1], ".git", "report-publish.lock"), "a") as lock:
+            for _ in range(300):
+                try:
+                    fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    break
+                except BlockingIOError:
+                    time.sleep(1)
+            else:
+                print("a publish holds the lock for 5 minutes; giving up", file=sys.stderr)
+                sys.exit(4)
+            rows = collect(args[1], args[2])
         if not rows:
             print(f"no bed reports for {args[2]}", file=sys.stderr)
             sys.exit(3)

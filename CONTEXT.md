@@ -25,7 +25,8 @@ Deployed runtime state is not verified by this remote evidence.
   The same rule is in the shared agent rules (in Infra, merged) and in the `report` skill on the Mac.
 - Nov 24, 2026: `reports.khamel.com/` is a dashboard of all pages, newest first, by day or by repo, with kind, repo,
   title, link and date for each page.
-- Nov 24, 2026: `bed` = ask the owner everything first, write the handoff, work alone for 1 to 1999 minutes, end
+- Nov 24, 2026: `bed` = ask the owner everything first, write the handoff, work alone for 1 to 1999 minutes (the owner's
+  range: from one minute up to about 33 hours), end
   with a bed report. At 5 AM PT all bed reports of the night become one morning report. Owner decision, same
   night: no #inbox message; the newest morning report is at `/morning/` and at the top of the dashboard. The morning job runs on the Mac, because the publish credential is there only (R-2).
 - Nov 24, 2026, 11:06 PM PT (bed): land all four open PRs (#7, #9, #10, #11). A branch with a push in the last hour

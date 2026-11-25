@@ -44,6 +44,15 @@ class Build(unittest.TestCase):
         self.assertIn("alpha: Pick a name", out)
         self.assertIn("Night &amp; day", out)
 
+    def test_unreadable_ask_warns(self):
+        import contextlib, io
+        self.put("alpha", "bed-2026-11-25", page() + '<div class="card ask" id="x"><h3>Hidden</h3></div>')
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            rows = rm.collect(self.root, "2026-11-25")
+        self.assertEqual(rows[0]["asks"], [])
+        self.assertIn("does not match the bed markup", err.getvalue())
+
     def test_unknown_status_is_counted(self):
         self.put("alpha", "bed-2026-11-25", page(status="sleeping"))
         out = rm.render(rm.collect(self.root, "2026-11-25"), "2026-11-25")
