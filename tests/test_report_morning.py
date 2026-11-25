@@ -53,6 +53,10 @@ class Build(unittest.TestCase):
         self.assertEqual(rows[0]["asks"], [])
         self.assertIn("does not match the bed markup", err.getvalue())
 
+    def test_impossible_date_is_refused(self):
+        self.assertFalse(rm.real_date("2026-02-30"))
+        self.assertTrue(rm.real_date("2026-11-25"))
+
     def test_unknown_status_is_counted(self):
         self.put("alpha", "bed-2026-11-25", page(status="sleeping"))
         out = rm.render(rm.collect(self.root, "2026-11-25"), "2026-11-25")

@@ -127,9 +127,16 @@ summary; open the report for the evidence. A status is what the session wrote la
 """
 
 
+def real_date(value):
+    try:
+        return bool(DATE.match(value)) and bool(datetime.strptime(value, "%Y-%m-%d"))
+    except ValueError:
+        return False
+
+
 def main():
     args = sys.argv[1:]
-    if len(args) == 4 and args[0] == "build" and DATE.match(args[2]):
+    if len(args) == 4 and args[0] == "build" and real_date(args[2]):
         # Read under bin/report's publish lock, so a publish that fails and resets the tree is never half-read.
         with open(os.path.join(args[1], ".git", "report-publish.lock"), "a") as lock:
             for _ in range(300):
