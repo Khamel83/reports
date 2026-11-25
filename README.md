@@ -39,6 +39,18 @@ Settings come from the environment, never from this repo:
 | `REPORTS_PROJECT` | Cloudflare Pages project name |
 | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` | Pages-edit token; the owner's vault supplies it |
 
+## Bed reports and the morning report
+
+The `bed` skill (on the owner's Mac) is for work that runs while the owner sleeps. The session asks all its
+questions first, then works alone and publishes a bed report at `<repo>/bed-<date>/`, where `<date>` is the date of
+the next 5 AM. A bed report has `report:kind` `bed`, a `<meta name="bed:status">` of `done`, `working` or
+`blocked`, a `.lede`, `.stats` and one `.card.ask` for each thing the owner must do.
+
+At 5:00 AM PT, `bin/report-morning build <content-dir> <date> <out.html>` collects all bed reports of that date into
+one page, `reports/morning-<date>/`, and prints one message. `bin/report-morning send <message.json>` sends it to
+the owner through Drop's notification API. Its settings come from the environment: `DROP_NOTIFY_URL`,
+`DROP_NOTIFY_TOKEN_FILE`, `INBOX_CHANNEL_ID`. No bed reports: no page and no message.
+
 ## Rules for this repo
 
 Never commit a token, a key, a report, a vault path, a stored credential's name, or a private hostname/ID (tailnet or

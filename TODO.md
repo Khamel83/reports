@@ -10,6 +10,10 @@
       `bin/report` refuses them).
 - [ ] R-4 Reply box on each page, with a Worker that sends the reply to the agent.
 - [ ] R-5 Slack thread link for every report that answers a voice note.
+- [ ] R-8 Bed skill and 5 AM morning report (owner ask, Nov 24, 2026). Source: `bin/report-morning`, tests, docs
+      (PR on branch `bed`). Mac: skill `~/.agents/skills/bed`, launchd `com.khamel.bed-morning` (loaded, test run
+      Nov 24, 10:45 PM PT: exit 0). Open: (a) the #inbox send waits on the Drop grant, Khamel83/drop#359; (b) the
+      first real 5 AM run with a delivered receipt; (c) the grant expires after 30 days, renewal through Drop.
 - [ ] R-6 Look at light mode and at a real phone after design v2 (the owner uses dark mode; tokens only).
 
 ## Done

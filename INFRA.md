@@ -13,7 +13,10 @@ OCI) are public facts, not secrets: the host is behind the access gate.
 | Publish | `bin/report publish <repo> <slug> <file.html>`: stamp, index, commit, push, `pagecast pages deploy` |
 | Caller on the Mac | The `report` skill (`publish.sh`): sets the content path and project, reads the token with `sops` |
 | Caller for Factory | `bin/report-from-task` (markdown result in, page out, Slack thread reply) |
+| Morning report | launchd on the Mac at 5:00 AM PT runs the `bed` skill's `morning.sh`: `bin/report-morning`, publish, send |
+| Morning message | Drop notification API (tailnet only) to Slack #inbox; 1 message a day, about 13 requests a day |
 | Credential | One token with Pages write permission only, in Infra's vault. Its name and path are in Infra |
+| Drop grant | Application `reports`, #inbox only, 30-day expiry; requested in Khamel83/drop#359 |
 | Needs on the host | `git`, `python3`, `perl`, `cksum`, `cmp`, `find`, `npx` (Pagecast 0.7.0); `markdown` for `report-from-task` |
 
 ## Cache
