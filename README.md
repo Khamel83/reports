@@ -47,9 +47,8 @@ the next 5 AM. A bed report has `report:kind` `bed`, a `<meta name="bed:status">
 `blocked`, a `.lede`, `.stats` and one `.card.ask` for each thing the owner must do.
 
 At 5:00 AM PT, `bin/report-morning build <content-dir> <date> <out.html>` collects all bed reports of that date into
-one page, `reports/morning-<date>/`, and prints one message. `bin/report-morning send <message.json>` sends it to
-the owner through Drop's notification API. Its settings come from the environment: `DROP_NOTIFY_URL`,
-`DROP_NOTIFY_TOKEN_FILE`, `INBOX_CHANNEL_ID`. No bed reports: no page and no message.
+one page, `reports/morning-<date>/`. `bin/report-index` copies the newest morning report to `/morning/` and puts a
+link to it at the top of the dashboard. No bed reports: no page.
 
 ## Rules for this repo
 

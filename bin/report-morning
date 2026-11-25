@@ -1,32 +1,24 @@
 #!/usr/bin/env python3
-"""Morning report: one page for all the bed reports of one night, and one message to the owner.
+"""Morning report: one page for all the bed reports of one night.
 
-usage: report-morning build <content-dir> <date> <out.html>   prints the message as JSON; exit 3 if no bed reports
-       report-morning send <message.json>                     sends it through Drop, prints the receipt as JSON
-env  : REPORTS_HOST (default reports.khamel.com)
-       send only: DROP_NOTIFY_URL, DROP_NOTIFY_TOKEN_FILE, INBOX_CHANNEL_ID
+usage: report-morning build <content-dir> <date> <out.html>   exit 3 if there are no bed reports
 
 A bed report is the page <repo>/bed-<date>[-<topic>]/index.html with <meta name="report:kind" content="bed">.
 <date> is the date of the morning the owner reads it (see the bed skill). Its <meta name="bed:status"> is
 done, working or blocked. Each `.card.ask` h3 is one thing the owner must do.
 """
 import html
-import json
 import os
 import re
 import subprocess
 import sys
-import time
-import urllib.request
-from datetime import datetime, timezone
+from datetime import datetime
 from zoneinfo import ZoneInfo
 
 PT = ZoneInfo("America/Los_Angeles")
-HOST = os.environ.get("REPORTS_HOST", "reports.khamel.com")
 NAME = re.compile(r"[a-z0-9][a-z0-9._-]*\Z")
 DATE = re.compile(r"\d{4}-\d{2}-\d{2}\Z")
 STATUS_TAG = {"done": "good", "working": "warn", "blocked": "bad"}
-SUMMARY_MAX, TITLE_MAX = 2000, 160  # Drop notification v1 limits
 
 
 def text(fragment):
@@ -126,43 +118,6 @@ summary; open the report for the evidence. A status is what the session wrote la
 """
 
 
-def message(rows, date):
-    by, asks = counts(rows)
-    title = f"While you slept: {len(rows)} projects, {by['done']} done, {asks} need you"[:TITLE_MAX]
-    lines = [f"• {r['repo']} [{r['status']}]: {r['lede'] or r['title']}"
-             + (f" (needs you: {len(r['asks'])})" if r["asks"] else "") for r in rows]
-    summary = ""
-    for index, line in enumerate(lines):
-        rest = f"\n… and {len(lines) - index} more in the report"
-        if len(summary) + len(line) + 1 + len(rest) > SUMMARY_MAX:
-            summary += rest
-            break
-        summary += ("\n" if summary else "") + line
-    return dict(schema_version="drop.notification.v1", event_id=f"reports:morning:{date}",
-                operation="slack.messages.send", content_kind="status_change",
-                observed_at=datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                title=title, summary=summary[:SUMMARY_MAX],
-                source_url=f"https://{HOST}/reports/morning-{date}/")
-
-
-def call(method, url, token, body=None):
-    request = urllib.request.Request(url, method=method, data=None if body is None else json.dumps(body).encode(),
-                                     headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"})
-    with urllib.request.urlopen(request, timeout=30) as response:
-        return json.loads(response.read())
-
-
-def send(msg, base, token, channel, http=call, polls=12, wait=10):
-    """POST once, then read the receipt until Slack delivery is proved. At most 1 + polls requests."""
-    receipt = http("POST", f"{base}/v1/notifications", token, dict(msg, channel_id=channel))
-    for _ in range(polls):
-        if receipt["state"] in ("delivered", "failed", "delivery_uncertain"):
-            break
-        time.sleep(wait)
-        receipt = http("GET", f"{base}/v1/notifications/{receipt['receipt_id']}", token)
-    return receipt
-
-
 def main():
     args = sys.argv[1:]
     if len(args) == 4 and args[0] == "build" and DATE.match(args[2]):
@@ -172,13 +127,6 @@ def main():
             sys.exit(3)
         with open(args[3], "w", encoding="utf-8") as handle:
             handle.write(render(rows, args[2]))
-        print(json.dumps(message(rows, args[2])))
-    elif len(args) == 2 and args[0] == "send":
-        base = os.environ["DROP_NOTIFY_URL"].rstrip("/")
-        token = open(os.environ["DROP_NOTIFY_TOKEN_FILE"], encoding="utf-8").read().strip()
-        receipt = send(json.load(open(args[1], encoding="utf-8")), base, token, os.environ["INBOX_CHANNEL_ID"])
-        print(json.dumps(receipt))
-        sys.exit(0 if receipt["state"] == "delivered" and receipt.get("provider_receipt") else 1)
     else:
         print(__doc__.split("\n\n")[1], file=sys.stderr)
         sys.exit(2)

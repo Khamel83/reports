@@ -2,6 +2,7 @@
 """Write the dashboard: <content>/index.html (by day) and <content>/_/by-repo/index.html (by repo).
 
 usage: report-index <content-dir>
+The newest page of kind `morning` (bin/report-morning) also goes to /morning/ and to the top of both views.
 env  : REPORTS_HOST (default reports.khamel.com)
 
 Kind and title come from each page's <meta name="report:kind"> and <title>; the repo is the folder name.
@@ -11,6 +12,7 @@ A publish of identical HTML is not a change and keeps the date, by design.
 import html
 import os
 import re
+import shutil
 import subprocess
 import sys
 import time
@@ -95,6 +97,15 @@ def listing(rows):
     return f'<ul class="rows">\n{items}</ul>'
 
 
+def morning_band(rows):
+    latest = next((r for r in rows if r["kind"] == "morning"), None)
+    if not latest:
+        return ""
+    return (f'<section>\n<div class="card verdict"><strong>Latest morning report</strong>'
+            f'<p>{html.escape(latest["title"])} · {clock(latest["when"])}</p>'
+            f'<p><a class="btn" href="/morning/">Open the morning report</a></p></div>\n</section>\n')
+
+
 def render(view, rows):
     groups = {}
     for row in rows:  # rows are newest first, so groups and their rows are too
@@ -120,7 +131,7 @@ def render(view, rows):
 <div class="stat"><b>{latest}</b>latest change</div>
 </div>
 </header>
-{sections}<footer class="meta">Made by <code>bin/report-index</code> at each publish. Times are the last change of each page, Pacific time.</footer>
+{morning_band(rows)}{sections}<footer class="meta">Made by <code>bin/report-index</code> at each publish. Times are the last change of each page, Pacific time.</footer>
 </main></body></html>
 """
 
@@ -128,6 +139,11 @@ def render(view, rows):
 def main():
     root = sys.argv[1]
     rows = collect(root)
+    latest = next((r for r in rows if r["kind"] == "morning"), None)
+    if latest:  # /morning/ always shows the newest morning report
+        os.makedirs(os.path.join(root, "morning"), exist_ok=True)
+        shutil.copyfile(os.path.join(root, latest["path"].strip("/"), "index.html"),
+                        os.path.join(root, "morning", "index.html"))
     for view, (_, target) in VIEWS.items():
         path = os.path.join(root, target)
         os.makedirs(os.path.dirname(path) or ".", exist_ok=True)

@@ -26,7 +26,7 @@ Deployed runtime state is not verified by this remote evidence.
 - Nov 24, 2026: `reports.khamel.com/` is a dashboard of all pages, newest first, by day or by repo, with kind, repo,
   title, link and date for each page.
 - Nov 24, 2026: `bed` = ask the owner everything first, write the handoff, work alone for 1 to 1999 minutes, end
-  with a bed report. At about 5 AM PT all bed reports of the night become one morning report, sent to Slack #inbox
-  through Drop. The morning job runs on the Mac, because the publish credential is there only (R-2).
+  with a bed report. At 5 AM PT all bed reports of the night become one morning report. Owner decision, same
+  night: no #inbox message; the newest morning report is at `/morning/` and at the top of the dashboard. The morning job runs on the Mac, because the publish credential is there only (R-2).
 - Nov 24, 2026: the owner accepted design v2. A browser can hold an old stylesheet; cause and fix are in `INFRA.md`
   (Cache).

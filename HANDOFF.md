@@ -14,10 +14,10 @@ Checkpoint: Nov 24, 2026, 8:50 PM PT. Host and deploy path are in `INFRA.md`; th
 ## In flight
 
 - Bed (R-8): PR #11 from branch `bed` (stacked on #9). The Mac parts are installed: skill `~/.agents/skills/bed`
-  (`/bed`), `morning.sh`, launchd `com.khamel.bed-morning` at 5:00 AM PT. The #inbox message waits on the Drop
-  grant (Khamel83/drop#359); until then the job publishes the page and logs `NOT SENT` (exit 5). The reports
+  (`/bed`), `morning.sh`, launchd `com.khamel.bed-morning` at 5:00 AM PT. No #inbox message (owner decision): the newest
+  morning report is at `/morning/` and on top of the dashboard. The reports
   checkout must stay on `bed` or `main` after the merge, because `morning.sh` runs `bin/report-morning` from it.
-  Check: `tail -20 ~/Library/Logs/bed-morning.log`; receipts in `~/.local/state/bed-morning/`.
+  Check: `tail -20 ~/Library/Logs/bed-morning.log`.
 - launchd cannot run `/bin/bash` or Homebrew `python3` on `/Volumes/2TB_SSD` (macOS privacy: denied or a hidden
   prompt). The job therefore starts from the uv Python 3.14, which has that access (as `com.eagle.portal`). If uv
   replaces that Python, the job fails with "Operation not permitted" in the log; point the plist at the new path.
