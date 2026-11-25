@@ -11,7 +11,7 @@ Checkpoint: Nov 24, 2026, 8:50 PM PT. Host and deploy path are in `INFRA.md`; th
 - Stylesheet version (#9): `bin/report` stamps `?v=<checksum>` on the stylesheet link in every page. Live from the
   branch since 8:39 PM PT (content commit `fe5ec7f`); all seven live pages carry `?v=2496485213`.
 - Rule "owner-readable output, plans included, goes out as a report link": README, the `report` skill on the Mac,
-  and the shared agent rules (Khamel83/infra#2421, merged).
+  and the shared agent rules (in Infra, merged).
 
 ## In flight
 
@@ -26,7 +26,7 @@ Checkpoint: Nov 24, 2026, 8:50 PM PT. Host and deploy path are in `INFRA.md`; th
   on the dashboard (same day). `bin/report` now adds the box in the "restyle" commit.
 
 - #9 waits for the reviewer bot. After the merge: `git checkout main && git pull --ff-only`, delete the branch.
-- The shared rule from infra#2421 was not in `~/.agents/shared-rules.md` on the Mac at 8:50 PM PT. Infra's rules
+- The shared Infra rule was not in `~/.agents/shared-rules.md` on the Mac at 8:50 PM PT. Infra's rules
   sync installs it. Check: `grep -c "report link" ~/.agents/shared-rules.md` (expect 1).
 
 ## Recheck
