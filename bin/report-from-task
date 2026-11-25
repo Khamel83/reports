@@ -60,7 +60,7 @@ def render(payload):
     page = f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{html.escape(html.unescape(plain))}</title>
-<meta name="report:kind" content="{kind}"><meta name="report:repo" content="{html.escape(repo)}"><meta name="report:ticket" content="{ident}">{choices}
+<meta name="report:kind" content="{html.escape(kind)}"><meta name="report:repo" content="{html.escape(repo)}"><meta name="report:ticket" content="{html.escape(ident)}">{choices}
 <link rel="stylesheet" href="/_/tokens.css">
 </head><body><main>
 <header class="hero">

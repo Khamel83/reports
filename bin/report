@@ -8,8 +8,9 @@ repo=$2 slug=$3 file=$4
 grep -qE 'href="/_/tokens\.css(\?v=[0-9a-z]+)?"' "$file" || { echo "report must link /_/tokens.css" >&2; exit 2; }
 here=$(cd "$(dirname "$0")/.." && pwd)
 # One publish at a time on the content checkout: the reset below must never touch another run's files. The lock is a
-# kernel lock (flock) on a file in .git, held through fd 9 by this shell; the kernel drops it when the run ends in any
-# way (exit, kill, power loss), so no stale lock is left. Wait up to 5 min.
+# kernel lock (flock) on a file in .git, held through fd 9 by this shell; the kernel drops it when the shell and its
+# children end in any way (exit, kill, power loss), so no stale lock is left. Push and deploy run with fd 9 closed, so
+# a lingering helper cannot keep it. Wait up to 5 min.
 lock="$REPORTS_CONTENT_DIR/.git/report-publish.lock"
 exec 9>>"$lock"
 python3 -I -c 'import fcntl, sys, time
@@ -47,7 +48,7 @@ cp "$file" "$dest/index.html"; box; stamp
 "$here/bin/report-index" "$REPORTS_CONTENT_DIR"; stamp  # dashboard at / and /_/by-repo/
 commit "report: $repo/$slug"
 trap - EXIT  # all committed; push and deploy failures leave nothing to reset
-git -C "$REPORTS_CONTENT_DIR" push -q origin HEAD || echo "warning: content backup push failed" >&2
+git -C "$REPORTS_CONTENT_DIR" push -q origin HEAD 9>&- || echo "warning: content backup push failed" >&2
 cd "$REPORTS_CONTENT_DIR"  # Pagecast writes .pagecast/ into the current directory
-DO_NOT_TRACK=1 PAGECAST_TELEMETRY=0 npx --yes pagecast@0.7.0 pages deploy "$REPORTS_CONTENT_DIR" --project "$REPORTS_PROJECT" --json >/dev/null
+DO_NOT_TRACK=1 PAGECAST_TELEMETRY=0 npx --yes pagecast@0.7.0 pages deploy "$REPORTS_CONTENT_DIR" --project "$REPORTS_PROJECT" --json >/dev/null 9>&-
 echo "published: /$repo/$slug/"

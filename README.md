@@ -50,7 +50,7 @@ The form posts to `/_/reply`. The reply Worker (`worker/reply.js`) saves the rep
 `sender`) in the owner's inbox with client name `reports`, then shows a "sent" page (its link carries an HMAC of the inbox receipt, so only a saved reply shows "Reply sent"). `reply_id` is a hash of page,
 choice and text, so the same reply sent twice counts once. This is permanent: the same choice and text sent to the same page later (also after a republish) opens no second task; change the text to send it again. Factory's inbox intake opens one Factory task for each reply. When the
 inbox does not confirm it, the page says "Not confirmed" and shows the text again. The host's access gate covers
-`/_/reply` too; the Worker refuses a post without the gate's identity header or from another site. Deploy: `bin/reply-deploy` (settings in its header, from the environment).
+`/_/reply` too; the Worker refuses a post without the gate's identity header or from another site. Deploy: `bin/reply-deploy` (settings in its header, from the environment; it needs its own token with Workers Scripts and Workers Routes write, not the Pages-edit token).
 
 ## Rules for this repo
 

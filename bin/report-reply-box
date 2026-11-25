@@ -91,7 +91,7 @@ def layout_only(root):
         if path == "_/tokens.css":
             continue
         old = git("show", "HEAD:" + path)
-        if not path.endswith("index.html") or old.returncode != 0 or not os.path.isfile(os.path.join(root, path)):
+        if not (path == "index.html" or path.endswith("/index.html")) or old.returncode != 0 or not os.path.isfile(os.path.join(root, path)):
             return False
         with open(os.path.join(root, path), encoding="utf-8") as stream:
             if plain(stream.read()) != plain(old.stdout):

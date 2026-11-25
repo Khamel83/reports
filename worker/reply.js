@@ -86,7 +86,7 @@ export default {
         return page(400, "No reply here", "Use the reply box at the end of a report.", "/");
       }
       const who = request.headers.get("Cf-Access-Authenticated-User-Email");
-      return page(200, "Reply sent", `The inbox saved it as ${sent}. Factory reads it on its next inbox pass.` +
+      return page(200, "Reply sent", `The inbox saved it as ${sent}. Factory reads it on its next inbox pass; a reply with the same choice and text as an earlier one opens no new task.` +
         (who ? ` Signed in as ${who}.` : ""),
         backPath(url.searchParams.get("back")));
     }
