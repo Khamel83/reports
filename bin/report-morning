@@ -175,6 +175,9 @@ class Clean(HTMLParser):
         href = attrs.get("href") or ""
         if tag == "a" and re.match(r"(https://|/(?![/\\]))[^\s\"'<>\\]*\Z", href):
             keep += f' href="{html.escape(href)}"'
+        if tag == "section":  # a section is always top level, so render can split the fragment on it safely
+            while self.open:
+                self.out.append(f"</{self.open.pop()}>")
         self.out.append(f"<{tag}{keep}>")
         self.open.append(tag)
 
@@ -202,7 +205,9 @@ def clean(fragment):
     parser = Clean()
     parser.feed(fragment)
     parser.close()
-    return parser.result().strip()
+    out = parser.result().strip()
+    # Text with no heading and no verdict (an error message, Markdown) is not an analysis: the page says it failed.
+    return out if re.search(r'<h2>|<div class="card verdict">', out) else ""
 
 
 def render(rows, date, skipped=(), analysis=None):
@@ -226,9 +231,8 @@ def render(rows, date, skipped=(), analysis=None):
                if unread else "")
     warning += "".join(f'<p class="note">Not read: <a href="{e(path)}">{e(path)}</a> ({e(why)}). '
                        f'It is not in the counts above.</p>\n' for path, why in skipped)
-    if analysis:  # the analysis merges the asks; keep only the warnings about pages it could not count
-        ask_cards = ""
-    needs = (f'<section>\n<h2>Needs you</h2>\n{warning}{ask_cards}</section>\n' if ask_cards or warning else "")
+    needs = (f'<section>\n<h2>{"Asks in each report" if analysis else "Needs you"}</h2>\n{warning}{ask_cards}</section>\n'
+             if ask_cards or warning else "")
     if analysis:
         if not analysis.lstrip().startswith("<section"):  # a leading verdict card gets its own band
             head, sep, rest = analysis.partition("<section")

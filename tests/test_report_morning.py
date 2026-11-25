@@ -159,10 +159,14 @@ class Analysis(unittest.TestCase):
         self.assertIn('<a href="/g2k/bed-2026-11-25/">r</a>', out)
         self.assertIn("<a>bad2</a>", out)
         for href in ("/\\evil.example/", "https://x/\\y", "/a b"):
-            self.assertEqual(rm.clean(f'<a href="{href}">x</a>'), "<a>x</a>")
-        self.assertEqual(rm.clean('<script><a href="/r/">in</a></script><p>after</p>'), "<p>after</p>")
+            self.assertEqual(rm.clean(f'<h2>h</h2><a href="{href}">x</a>'), "<h2>h</h2><a>x</a>")
+        self.assertEqual(rm.clean('<script><a href="/r/">in</a></script><h2>after</h2>'), "<h2>after</h2>")
         self.assertIn("1 &lt; 2 &amp; <b>open</b></p>", out)
         self.assertTrue(out.endswith("</section>"))
+        self.assertEqual(rm.clean("Error: no provider answered"), "")
+        self.assertEqual(rm.clean("## Story\n- a *b*"), "")
+        nested = rm.clean('<div class="card verdict"><p>V<section><h2>S</h2></section>')
+        self.assertEqual(nested, '<div class="card verdict"><p>V</p></div><section><h2>S</h2></section>')
 
     def test_render_with_analysis_and_without(self):
         rows = [dict(repo="alpha", path="/alpha/bed-2026-11-25/", title="T", lede="L", status="done", stats=[],
@@ -171,7 +175,8 @@ class Analysis(unittest.TestCase):
             '<div class="card verdict"><strong>V</strong></div><section><h2>Overlaps</h2></section>'))
         self.assertIn('<section>\n<div class="card verdict"><strong>V</strong></div>\n</section>', with_it)
         self.assertIn("<h2>Overlaps</h2>", with_it)
-        self.assertNotIn("alpha: Pick a name", with_it)   # merged by the analysis
+        self.assertIn("alpha: Pick a name", with_it)   # the plain ask list always stays
+        self.assertIn("Asks in each report", with_it)
         self.assertIn("one model's reading of all 1 bed reports", with_it)
         failed = rm.render(rows, "2026-11-25", analysis="")
         self.assertIn("No combined analysis this morning", failed)
