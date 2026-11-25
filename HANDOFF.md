@@ -4,20 +4,16 @@ Checkpoint: Nov 24, 2026, 8:50 PM PT. Host and deploy path are in `INFRA.md`; th
 
 ## Done and live
 
-- Design v2 (#6): dark first, full-width bands, parts in `DESIGN.md`. The owner saw it live and accepted it
-  ("MUCH better", Nov 24, about 8:40 PM PT).
+- Design v2 (#6): dark first, full-width bands, parts in `DESIGN.md`. Accepted live on Nov 24, 2026.
 - Dashboard (#6): `/` by day, `/_/by-repo/` by repo. `bin/report` runs `bin/report-index` at each publish.
 - The five pages published before design v2 have the hero + section layout and a `report:kind` tag; words unchanged.
 - Stylesheet version (#9): `bin/report` stamps `?v=<checksum>` on the stylesheet link in every page. Live from the
   branch since 8:39 PM PT (content commit `fe5ec7f`); all seven live pages carry `?v=2496485213`.
-- Rule "owner-readable output, plans included, goes out as a report link": README, the `report` skill on the Mac,
-  and the shared agent rules (in Infra, merged).
+- Rule "owner-readable output, plans included, goes out as a report link": README and the publishing skill.
 
 ## In flight
 
 - #9 waits for the reviewer bot. After the merge: `git checkout main && git pull --ff-only`, delete the branch.
-- The shared Infra rule was not in `~/.agents/shared-rules.md` on the Mac at 8:50 PM PT. Infra's rules
-  sync installs it. Check: `grep -c "report link" ~/.agents/shared-rules.md` (expect 1).
 
 ## Recheck
 
