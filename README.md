@@ -42,8 +42,8 @@ Settings come from the environment, never from this repo:
 ## Bed reports and the morning report
 
 The `bed` skill (on the owner's Mac) is for work that runs while the owner sleeps. The session asks all its
-questions first, then works alone and publishes a bed report at `<repo>/bed-<date>/`, where `<date>` is the date of
-the next 5 AM. A bed report has `report:kind` `bed`, a `<meta name="bed:status">` of `done`, `working` or
+questions first, then works alone and publishes a bed report at `<repo>/bed-<date>/` (or `<repo>/bed-<date>-<topic>/`
+for a second one in the same repo that night), where `<date>` is the date of the next 5 AM. A bed report has `report:kind` `bed`, a `<meta name="bed:status">` of `done`, `working` or
 `blocked`, a `.lede`, `.stats` and one `.card.ask` for each thing the owner must do.
 
 At 5:00 AM PT, `bin/report-morning build <content-dir> <date> <out.html>` collects all bed reports of that date into

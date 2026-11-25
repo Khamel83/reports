@@ -86,6 +86,15 @@ class Build(unittest.TestCase):
             self.assertEqual(rm.collect(self.root, "2026-11-25"), [])
         self.assertIn("not in the morning report", err.getvalue())
 
+    def test_non_utf8_page_is_skipped(self):
+        os.makedirs(os.path.join(self.root, "alpha", "bed-2026-11-25"))
+        with open(os.path.join(self.root, "alpha", "bed-2026-11-25", "index.html"), "wb") as handle:
+            handle.write(b"\xff\xfe bad")
+        self.put("beta", "bed-2026-11-25", page())
+        import contextlib, io
+        with contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual([r["repo"] for r in rm.collect(self.root, "2026-11-25")], ["beta"])
+
     def test_impossible_date_is_refused(self):
         self.assertFalse(rm.real_date("2026-02-30"))
         self.assertTrue(rm.real_date("2026-11-25"))

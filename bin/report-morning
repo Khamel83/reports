@@ -60,7 +60,12 @@ def collect(root, date):
             path = os.path.join(root, rel)
             if not (slug == f"bed-{date}" or slug.startswith(f"bed-{date}-")) or not os.path.isfile(path):
                 continue
-            page = open(path, encoding="utf-8").read()
+            try:
+                with open(path, encoding="utf-8") as handle:
+                    page = handle.read()
+            except UnicodeDecodeError:
+                print(f"warning: {rel}: not UTF-8; not in the morning report", file=sys.stderr)
+                continue
             if meta(page, "report:kind") != "bed":
                 print(f"warning: {rel}: a bed-dated page without <meta name=\"report:kind\" content=\"bed\">; "
                       "not in the morning report", file=sys.stderr)

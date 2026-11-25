@@ -135,7 +135,9 @@ test("a stalled inbox ends in not confirmed with the text back", async () => {
     DROP_INTAKE_TOKEN: "intake-test",
     DROP: { fetch: (url, init) => new Promise((_, reject) => init.signal.addEventListener("abort", () => reject(init.signal.reason))) },
   };
-  const response = await worker.fetch(post({ ...page, text: "still there" }), env);
+  // AbortSignal.timeout does not keep Node 22's event loop alive; without this timer the test runner ends first.
+  const alive = setInterval(() => {}, 1000);
+  const response = await worker.fetch(post({ ...page, text: "still there" }), env).finally(() => clearInterval(alive));
   assert.equal(response.status, 502);
   assert.match(await response.text(), /still there/);
 });
