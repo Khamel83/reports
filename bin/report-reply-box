@@ -20,6 +20,7 @@ OLD = re.compile(re.escape(START) + r".*?" + re.escape(END) + r"\n?", re.S)
 
 
 def meta(page, name):
+    page = re.sub(r"<!--.*?-->", "", page, flags=re.S)  # an example tag in a comment is not a choice
     found = re.search(r'<meta name="report:' + name + r'" content="([^"]*)"', page)
     return html.unescape(found.group(1)) if found else ""
 

@@ -2,6 +2,7 @@
 //
 // POST: a reply box form from a report page. The Worker saves it as one JSON item in the owner's inbox (a Drop
 // capture, client "reports") and answers 303 to the "sent" page, so a browser refresh does not send it twice.
+// The reply id is a hash of page, choice and text; Factory keys on the same hash, so a resend is one task.
 // Factory's intake reads new inbox items and opens one task for each reply.
 // GET ?sent=<id>&back=<path>: the "sent" page.
 //
@@ -12,6 +13,13 @@ const NAME = /^[a-z0-9][a-z0-9._-]{0,63}$/;
 const SLUG = /^[a-z0-9][a-z0-9-]{0,127}$/;
 const ID = /^[A-Za-z0-9-]{1,80}$/;
 const LIMITS = { text: 4000, choice: 80, ticket: 64, title: 200 };
+
+// One reply = one id: the same page, choice and text give the same id, so a double click or a retry is one reply.
+export async function replyId(repo, slug, choice, text) {
+  const bytes = new TextEncoder().encode(JSON.stringify([repo, slug, choice, text]));
+  const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
+  return Array.from(digest.slice(0, 16), (b) => b.toString(16).padStart(2, "0")).join("");
+}
 
 export function buildReply(form, { host, sender, now, id }) {
   const get = (key) => String(form.get(key) ?? "").trim();
@@ -56,10 +64,18 @@ export default {
     if (request.method === "GET") {
       const sent = url.searchParams.get("sent");
       if (!ID.test(sent || "")) return page(400, "No reply here", "Use the reply box at the end of a report.", "/");
-      return page(200, "Reply sent", `Saved as ${sent}. Factory opens a task for it within 5 minutes.`,
+      const who = request.headers.get("Cf-Access-Authenticated-User-Email");
+      return page(200, "Reply sent", `Saved as ${sent}. Factory reads new replies every 5 minutes.` +
+        (who ? ` Signed in as ${who}.` : ""),
         backPath(url.searchParams.get("back")));
     }
     if (request.method !== "POST") return new Response("Method not allowed", { status: 405, headers: { Allow: "GET, POST" } });
+    // Access is the gate. These checks only make sure it is there: no Access identity or a form from another
+    // site means the request did not come from the owner's signed-in page, so nothing is saved.
+    const origin = request.headers.get("Origin");
+    if (!request.headers.get("Cf-Access-Authenticated-User-Email") || (origin && origin !== `https://${url.host}`)) {
+      return page(403, "Not sent", "This reply did not come from a signed-in report page.", "/");
+    }
 
     let form;
     try {
@@ -69,13 +85,14 @@ export default {
     }
     const built = buildReply(form, {
       host: url.host,
-      sender: request.headers.get("Cf-Access-Authenticated-User-Email") || "",
+      sender: request.headers.get("Cf-Access-Authenticated-User-Email"),
       now: new Date().toISOString(),
-      id: crypto.randomUUID(),
+      id: "",
     });
     const text = String(form.get("text") ?? "");
     if (built.error) return page(400, "Not sent", built.error, "/", text);
     const reply = built.value;
+    reply.reply_id = await replyId(reply.repo, reply.slug, reply.choice, reply.text);
     const back = `/${reply.repo}/${reply.slug}/`;
 
     let receipt = null;
@@ -97,7 +114,9 @@ export default {
     } catch (error) {
       console.log(JSON.stringify({ message: "reply_not_saved", error: String(error && error.message || error) }));
     }
-    if (!receipt) return page(502, "Not sent", "The inbox did not save the reply. Nothing was sent. Try again.", back, text);
+    if (!receipt) {
+      return page(502, "Not confirmed", "The inbox did not confirm the reply. Send it again: the same reply counts once.", back, text);
+    }
     const next = `/_/reply?sent=${encodeURIComponent(receipt)}&back=${encodeURIComponent(back)}`;
     return new Response(null, { status: 303, headers: { Location: next, "Cache-Control": "no-store" } });
   },

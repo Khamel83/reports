@@ -11,8 +11,8 @@ function form(fields) {
   return data;
 }
 
-function post(fields) {
-  return new Request(`https://${HOST}/_/reply`, { method: "POST", body: form(fields) });
+function post(fields, headers = { "Cf-Access-Authenticated-User-Email": "owner", Origin: `https://${HOST}` }) {
+  return new Request(`https://${HOST}/_/reply`, { method: "POST", body: form(fields), headers });
 }
 
 function inbox(answer, status = 200) {
@@ -43,7 +43,24 @@ test("a reply is saved once as one inbox item and the browser goes to the sent p
   assert.equal(saved.schema, "reports.reply.v1");
   assert.equal(saved.page_url, `https://${HOST}/infra/a2ui-check/`);
   assert.deepEqual([saved.ticket, saved.title, saved.choice, saved.text], ["DO-12", "A2UI check", "B", "Do R-4."]);
-  assert.match(saved.reply_id, /^[0-9a-f-]{36}$/);
+  assert.match(saved.reply_id, /^[0-9a-f]{32}$/);
+  assert.equal(saved.sender, "owner");
+});
+
+test("the same reply twice has the same id; another text has another", async () => {
+  const { calls, env } = inbox({ ok: true, drop_id: "a-1" });
+  for (const text of ["Do R-4.", "Do R-4.", "Other."]) await worker.fetch(post({ ...page, choice: "B", text }), env);
+  const ids = calls.map((call) => JSON.parse(call.init.body).reply_id);
+  assert.equal(ids[0], ids[1]);
+  assert.notEqual(ids[0], ids[2]);
+});
+
+test("no Access identity or another origin saves nothing", async () => {
+  const { calls, env } = inbox({ ok: true, drop_id: "a-1" });
+  for (const headers of [{ Origin: `https://${HOST}` }, { "Cf-Access-Authenticated-User-Email": "owner", Origin: "https://evil.example" }]) {
+    assert.equal((await worker.fetch(post({ ...page, text: "hi" }, headers), env)).status, 403);
+  }
+  assert.equal(calls.length, 0);
 });
 
 test("an inbox failure says not sent and gives the text back", async () => {
@@ -52,7 +69,7 @@ test("an inbox failure says not sent and gives the text back", async () => {
     const response = await worker.fetch(post({ ...page, text: "keep <this>" }), env);
     assert.equal(response.status, 502);
     const body = await response.text();
-    assert.match(body, /Not sent/);
+    assert.match(body, /Not confirmed/);
     assert.match(body, /keep &lt;this&gt;/);
   }
 });

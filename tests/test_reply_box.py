@@ -40,6 +40,10 @@ class ReplyBox(unittest.TestCase):
         page = box.apply(PAGE.replace("</main>", '<footer class="meta">by x</footer></main>'), "infra", "x")
         self.assertLess(page.index(box.END), page.index('<footer class="meta">'))
 
+    def test_choices_in_a_comment_are_ignored(self):
+        page = box.apply('<head><!-- <meta name="report:choices" content="A|B"> --></head><main></main>', "infra", "x")
+        self.assertNotIn('class="choice"', page)
+
     def test_no_main_no_box(self):
         self.assertEqual(box.apply("<p>x</p>", "infra", "x"), "<p>x</p>")
 

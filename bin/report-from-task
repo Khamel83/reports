@@ -52,7 +52,10 @@ def render(payload):
     # One <section> per h2: tokens.css gives sections full-width bands.
     parts = [part.strip() for part in re.split(r"(?=<h2[ >])", body) if part.strip()]
     sections = "".join(f"<section>\n{part}\n</section>\n" for part in parts)
-    picks = [str(c).replace("|", "/").strip() for c in payload.get("choices") or [] if str(c).strip()][:6]
+    given = payload.get("choices") or []
+    if not isinstance(given, list) or not all(isinstance(c, str) for c in given):
+        raise SystemExit("choices must be a list of strings")
+    picks = [c.replace("|", "/").strip() for c in given if c.strip()][:6]
     choices = f'<meta name="report:choices" content="{html.escape("|".join(picks))}">' if picks else ""
     page = f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
