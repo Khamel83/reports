@@ -30,6 +30,14 @@ export async function sign(secret, id) {
   return Array.from(mac.slice(0, 16), (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+// Constant-time compare of two hex strings.
+function same(a, b) {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i += 1) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
 export function buildReply(form, { host, sender, now, id }) {
   const get = (key) => String(form.get(key) ?? "").trim();
   const repo = get("repo");
@@ -73,7 +81,7 @@ export default {
     if (request.method === "GET") {
       const sent = url.searchParams.get("sent");
       const sig = url.searchParams.get("sig") || "";
-      if (!ID.test(sent || "") || !env.DROP_INTAKE_TOKEN || sig !== await sign(env.DROP_INTAKE_TOKEN, sent)) {
+      if (!ID.test(sent || "") || !env.DROP_INTAKE_TOKEN || !same(sig, await sign(env.DROP_INTAKE_TOKEN, sent))) {
         return page(400, "No reply here", "Use the reply box at the end of a report.", "/");
       }
       const who = request.headers.get("Cf-Access-Authenticated-User-Email");

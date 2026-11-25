@@ -44,10 +44,10 @@ def box(page, repo, slug):
 
 def apply(page, repo, slug):
     """Return the page with exactly one current box, or the page unchanged when it has no </main>."""
+    if page.rfind("</main>") < 0:
+        return page
     page = OLD.sub("", page)
     end = page.rfind("</main>")
-    if end < 0:
-        return page
     footer = page.rfind('<footer class="meta"', 0, end)
     at = footer if footer >= 0 else end
     return page[:at] + box(page, repo, slug) + page[at:]

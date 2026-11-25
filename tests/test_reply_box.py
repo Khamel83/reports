@@ -47,6 +47,10 @@ class ReplyBox(unittest.TestCase):
     def test_no_main_no_box(self):
         self.assertEqual(box.apply("<p>x</p>", "infra", "x"), "<p>x</p>")
 
+    def test_no_main_keeps_an_existing_box(self):
+        page = box.apply(PAGE, "infra", "x").replace("</main>", "")
+        self.assertEqual(box.apply(page, "infra", "x"), page)
+
     def test_tree_skips_dashboard_pages(self):
         with tempfile.TemporaryDirectory() as root:
             for rel in ("index.html", "_/by-repo/index.html", "infra/one/index.html", ".git/x/index.html"):
