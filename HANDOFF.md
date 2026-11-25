@@ -1,6 +1,6 @@
 # Handoff
 
-Checkpoint: Nov 24, 2026, 10:50 PM PT. Host and deploy path are in `INFRA.md`; the credential name and location are in Infra's private records.
+Checkpoint: Nov 24, 2026, 10:55 PM PT. Host and deploy path are in `INFRA.md`; the credential name and location are in Infra's private records.
 
 ## Done and live
 
@@ -15,13 +15,11 @@ Checkpoint: Nov 24, 2026, 10:50 PM PT. Host and deploy path are in `INFRA.md`; t
 
 ## In flight
 
-- R-4 reply box (#10, stacked on #9). Live from the branch since Nov 24, 2026, about 10:15 PM PT: all pages have the
-  box and the Worker answers on `/_/reply*` behind the access gate (no login: 302).
-  **Paused on purpose:** the Worker has no inbox secret, so every reply answers "Not confirmed" and shows the text
-  again. Reason: the installed Factory intake moves past `reports` items, so a reply sent now would be lost.
-  Trigger: the Factory intake change for `reports` items deployed (its PR is in Infra's TODO). Restore: `bin/reply-deploy` with the inbox
-  token set (names, vault paths and exact steps are in Infra's TODO, "A2UI trial and reports R-4"). Then the owner
-  presses "Works" on `/reports/r4-reply-box/`; check one Factory task with the page link. Decide by Nov 27, 2026.
+- R-4 reply box (#10, stacked on #9). Box on all pages since Nov 24, 2026, about 10:15 PM PT. **Live since Nov 24,
+  2026, 10:50 PM PT:** Worker `reports-reply` has the inbox secret (deployed from this branch); the Factory intake
+  change for `reports` items and the Dispatch exclusion are both deployed on OCI the same evening. Open check: the
+  owner presses "Works" on `/reports/r4-reply-box/`; one Factory task with the page link must appear. Then R-4 is done.
+  Way back: `wrangler secret delete DROP_INTAKE_TOKEN` on `reports-reply` pauses it again (every reply: "Not confirmed").
   Known effect: the first R-4 publish put the box in a "report" commit, so five older pages show Nov 24 10:00 PM PT
   on the dashboard (same day). `bin/report` now adds the box in the "restyle" commit.
 
