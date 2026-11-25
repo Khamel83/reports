@@ -17,14 +17,11 @@ Checkpoint: Nov 24, 2026, 8:50 PM PT. Host and deploy path are in `INFRA.md`; th
   At 11:06 PM PT #9 and #10 had pushes from their own sessions (less than 1 hour old), so they are left alone until quiet.
   Recheck: `gh pr list`; `for b in stylesheet-version feat/r4-reply-box; do git log -1 --format=%cd origin/$b; done`.
 
-- Bed (R-8): PR #11 from branch `bed` (stacked on #9). The Mac parts are installed: skill `~/.agents/skills/bed`
-  (`/bed`), `morning.sh`, launchd `com.khamel.bed-morning` at 5:00 AM PT. No #inbox message (owner decision): the newest
-  morning report is at `/morning/` and on top of the dashboard. The reports
-  checkout must stay on `bed` or `main` after the merge, because `morning.sh` runs `bin/report-morning` from it.
-  Check: `tail -20 ~/Library/Logs/bed-morning.log`.
-- launchd cannot run `/bin/bash` or Homebrew `python3` on `/Volumes/2TB_SSD` (macOS privacy: denied or a hidden
-  prompt). The job therefore starts from the uv Python 3.14, which has that access (as `com.eagle.portal`). If uv
-  replaces that Python, the job fails with "Operation not permitted" in the log; point the plist at the new path.
+- Bed (R-8): PR #11 from branch `bed` (stacked on #9). The Mac parts (the `bed` skill, its morning job at 5:00 AM PT,
+  the log and the macOS disk-access note) are installed on the Mac and described in the skill itself, not here. No
+  #inbox message (owner decision): the newest morning report is at `/morning/` and on top of the dashboard. The
+  reports checkout on the Mac must stay on `bed`, or on `main` after the merge, because the job runs
+  `bin/report-morning` from it.
 
 - #9 waits for the reviewer bot. After the merge: `git checkout main && git pull --ff-only`, delete the branch.
 

@@ -1,5 +1,5 @@
 <!-- janitor:begin:todo -->
-- Open items are in "Open" below (R-1 to R-6); this block adds none.
+- Open items are in "Open" below (R-1 to R-8); this block adds none.
 <!-- janitor:end:todo -->
 
 ## Open
@@ -12,7 +12,7 @@
 - [ ] R-5 Slack thread link for every report that answers a voice note.
 - [ ] R-8 Bed skill and 5 AM morning report (owner ask, Nov 24, 2026): https://github.com/Khamel83/reports/pull/11.
       Owner decision: no #inbox message; the newest morning report is at `/morning/` and on top of the dashboard.
-      Open: the first real 5 AM run (check `~/Library/Logs/bed-morning.log` on Nov 25).
+      Open: the first real 5 AM run (Nov 25; the log path is in the `bed` skill).
 - [ ] R-6 Look at light mode and at a real phone after design v2 (the owner uses dark mode; tokens only).
 
 ## Done
