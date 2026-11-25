@@ -4,3 +4,9 @@
 - `01345f5ac18d57d45e8f7c1a13999fb0321fda10`: Make tables swipeable and tighten layout on phones
 - `cc72ecbcf60de057ba9cdd23c7733d6e99c4e254`: Add reports standard, design tokens, template, publisher and secrets check
 <!-- janitor:end:recent -->
+
+## Owner decisions
+
+- Nov 24, 2026: reports are dark first and use the band layout in `DESIGN.md` (wide bands, heavy condensed capitals,
+  stat tiles, cards). The owner reads in dark mode only. The old narrow warm-paper column is retired.
+- Nov 24, 2026: everything the owner is meant to read, plans included, goes out as a report link. No relative paths.

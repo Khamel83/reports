@@ -5,6 +5,9 @@ Public on purpose: this repo holds the rules, the look and the tools. It holds *
 
 ## The standard
 
+- **Scope:** everything the owner is meant to read is a report: results, plans, research, reviews, comparisons,
+  status pages. Give the owner the full `https://` link. Never give a relative path such as `docs/plan.md`: it does
+  not say which repo it is in and it does not open on a phone.
 - **URL:** `https://<host>/<repo>/<slug>/` — `<repo>` is the project that produced it, `<slug>` is short and readable
   (`ioniq-5-vs-6-vs-egolf`); use a ticket or date when no good name exists.
 - **File:** one self-contained `index.html` per report at `<repo>/<slug>/index.html`. No external scripts or images.

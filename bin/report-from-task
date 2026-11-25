@@ -47,17 +47,21 @@ def render(payload):
     ticket_link = f' · <a href="{html.escape(ticket)}">Factory ticket</a>' if ticket.startswith("https://") else ""
     plain = re.sub(r"<[^>]+>", "", title_html)
     repo = os.environ.get("REPORTS_REPO", "factory")
+    # One <section> per h2: tokens.css gives sections full-width bands.
+    parts = [part.strip() for part in re.split(r"(?=<h2[ >])", body) if part.strip()]
+    sections = "".join(f"<section>\n{part}\n</section>\n" for part in parts)
     page = f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{html.escape(html.unescape(plain))}</title>
 <meta name="report:repo" content="{html.escape(repo)}"><meta name="report:ticket" content="{ident}">
 <link rel="stylesheet" href="/_/tokens.css">
 </head><body><main>
+<header class="hero">
 <p class="kicker">{html.escape(repo)} · {ident}</p>
 <h1>{title_html}</h1>
 {f'<p class="lede">{lede}</p>' if lede else ''}
-{body}
-<div class="meta">Written by a Factory agent{ticket_link}. Anything marked not verified was not confirmed.</div>
+</header>
+{sections}<footer class="meta">Written by a Factory agent{ticket_link}. Anything marked not verified was not confirmed.</footer>
 </main></body></html>
 """
     return plain, page
