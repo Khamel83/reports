@@ -26,7 +26,7 @@ VIEWS = {"day": ("/", "index.html"), "repo": ("/_/by-repo/", os.path.join("_", "
 def change_times(root):
     """Path -> author time of its last commit; paths this publish changes get now.
 
-    Author time, so a restyle of old pages can keep their dates with `git commit --date`.
+    Commits whose subject starts with "restyle:" (a new stylesheet version, a layout-only edit) are not changes.
     Empty when root is not a git repo; then collect() uses file times.
     """
     def git(*args):  # quotePath off and -z: paths come back literal, as collect() looks them up
@@ -34,10 +34,12 @@ def change_times(root):
                               capture_output=True, text=True, check=True).stdout
     times, stamp = {}, None
     try:
-        for line in git("log", "--format=@%at", "--name-only").splitlines():
-            if line.startswith("@"):
-                stamp = int(line[1:])
-            elif line:
+        # One header line per commit (\x01, time, subject), then its paths. Only the subject decides "restyle:".
+        for line in git("log", "--format=%x01%at %s", "--name-only").splitlines():
+            if line.startswith("\x01"):
+                at, _, subject = line[1:].partition(" ")
+                stamp = None if subject.startswith("restyle:") else int(at)
+            elif line and stamp is not None:
                 times.setdefault(line, stamp)
     except (subprocess.CalledProcessError, FileNotFoundError):
         pass  # no commits yet, or not a git repo
