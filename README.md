@@ -39,6 +39,20 @@ Settings come from the environment, never from this repo:
 | `REPORTS_PROJECT` | Cloudflare Pages project name |
 | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` | Pages-edit token; the owner's vault supplies it |
 
+## Bed reports and the morning report
+
+The `bed` skill (on the owner's Mac) is for work that runs while the owner sleeps. The session asks all its
+questions first, then works alone and publishes a bed report at `<repo>/bed-<date>/` (or `<repo>/bed-<date>-<topic>/`
+for a second one in the same repo that night), where `<date>` is the date of the next 5 AM. A bed report has `report:kind` `bed`, a `<meta name="bed:status">` of `done`, `working` or
+`blocked`, a `.lede`, `.stats` and one `.card.ask` for each thing the owner must do.
+
+At 5:00 AM PT, `bin/report-morning build <content-dir> <date> <out.html>` collects all bed reports of that date into
+one page, `reports/morning-<date>/`. `bin/report-index` copies the newest morning report to `/morning/` and puts a
+link to it at the top of the dashboard. No bed reports: no page. The morning page is a snapshot at 5 AM. A session still working then is in it with
+status `working` (each session publishes its first bed report when it starts), and its card links to the live bed
+report; changes after 5 AM show only there. A session that starts after 5 AM has the next day's date, so it is in the
+next morning report.
+
 ## Reply
 
 Every report page ends with a reply box (the dashboard pages, `/` and `/_/`, have none): a text field, one button for each answer in
