@@ -58,6 +58,25 @@ export function buildReply(form, { host, sender, now, id }) {
   return { value };
 }
 
+async function readCapped(request, limit) {
+  if (Number(request.headers.get("Content-Length") || 0) > limit) return null;
+  if (!request.body) return new Uint8Array();
+  const reader = request.body.getReader();
+  const parts = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > limit) { await reader.cancel(); return null; }
+    parts.push(value);
+  }
+  const all = new Uint8Array(size);
+  let at = 0;
+  for (const part of parts) { all.set(part, at); at += part.byteLength; }
+  return all;
+}
+
 function escape(text) {
   return String(text).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 }
@@ -100,12 +119,11 @@ export default {
       return page(403, "Not sent", "This reply did not come from a signed-in report page.", "/");
     }
 
-    if (Number(request.headers.get("Content-Length") || 0) > MAX_BODY) {  // refuse before the body is read
-      return page(413, "Not sent", "The reply is too long. Go back and shorten it.", "/");
-    }
     let form;
     try {
-      form = await request.formData();
+      const body = await readCapped(request, MAX_BODY);  // stops reading past the cap, with or without Content-Length
+      if (body === null) return page(413, "Not sent", "The reply is too long. Go back and shorten it.", "/");
+      form = await new Response(body, { headers: { "Content-Type": request.headers.get("Content-Type") || "" } }).formData();
     } catch {
       return page(400, "Not sent", "The reply could not be read. Go back and try again.", "/");
     }

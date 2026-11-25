@@ -35,6 +35,7 @@ box() { "$here/bin/report-reply-box" "$REPORTS_CONTENT_DIR"; }
 # are the "restyle" commit, and the new page is the "report" commit.
 # Leftovers of a killed run (only _/tokens.css, stylesheet stamps and reply boxes) are layout: file them as
 # "restyle:", not content. The box tool compares each changed page with HEAD without the box and the stamp.
+find "$REPORTS_CONTENT_DIR" -name index.html.tmp -not -path '*/.git/*' -delete  # half-written box temp of a killed run
 if "$here/bin/report-reply-box" --layout-only "$REPORTS_CONTENT_DIR"; then
   commit "restyle: leftovers of an interrupted publish"
 fi

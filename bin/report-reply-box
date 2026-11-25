@@ -75,8 +75,10 @@ def main(root):
                 page = handle.read()
             new = apply(page, repo, slug)
             if new != page:
-                with open(path, "w", encoding="utf-8") as handle:
+                tmp = path + ".tmp"  # write beside the page, then rename: a kill never leaves a cut page
+                with open(tmp, "w", encoding="utf-8") as handle:
                     handle.write(new)
+                os.replace(tmp, path)
                 changed += 1
     return changed
 

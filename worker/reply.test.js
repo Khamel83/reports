@@ -147,3 +147,13 @@ test("a body over the size limit is refused before it is read", async () => {
   assert.equal(response.status, 413);
   assert.equal(calls.length, 0);
 });
+
+test("a streamed body over the size limit is refused without a Content-Length", async () => {
+  const { calls, env } = inbox({ ok: true, drop_id: "2603" });
+  const chunk = new TextEncoder().encode("text=" + "x".repeat(70000));
+  const body = new ReadableStream({ start(c) { c.enqueue(chunk); c.close(); } });
+  const headers = { "Cf-Access-Authenticated-User-Email": "owner", Origin: `https://${HOST}`, "Content-Type": "application/x-www-form-urlencoded" };
+  const response = await worker.fetch(new Request(`https://${HOST}/_/reply`, { method: "POST", body, headers, duplex: "half" }), env);
+  assert.equal(response.status, 413);
+  assert.equal(calls.length, 0);
+});
