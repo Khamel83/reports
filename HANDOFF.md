@@ -22,6 +22,14 @@ Checkpoint: Nov 24, 2026, 11:55 PM PT. Host and deploy path are in `INFRA.md`; t
   (owner decision): the newest morning report is at `/morning/` and on top of the dashboard. The reports checkout on
   the Mac must stay on `bed`, or on `main` after the merge, because the job and every publish run from it.
 
+- R-4 reply box (#10, merged Nov 24, 2026, 11:50 PM PT). **Live and verified:** Worker `reports-reply` has its inbox secret since Nov 24,
+  2026, 10:50 PM PT (deployed from this branch), after the Factory intake change for `reports` items and the Dispatch
+  exclusion were deployed. Nov 24, 10:52 PM PT the owner pressed "Works" on `/reports/r4-reply-box/`; Factory made one
+  task, DO-894, with the page link, choice and text, at 10:55 PM PT. Way back: delete the Worker's inbox secret
+  (binding name in `bin/reply-deploy`); every reply then answers "Not confirmed".
+  Known effect: the first R-4 publish put the box in a "report" commit, so five older pages show Nov 24 10:00 PM PT
+  on the dashboard (same day). `bin/report` now adds the box in the "restyle" commit.
+
 ## Recheck
 
 - Look: serve the content repo locally (`python3 -m http.server` in a copy that has `_/tokens.css`), open a page in

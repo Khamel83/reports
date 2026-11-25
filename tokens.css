@@ -79,6 +79,16 @@ img,svg{max-width:100%;height:auto}
 .tag.warn{background:color-mix(in srgb,var(--warn) 17%,transparent);color:var(--warn)}
 .tag.bad,.tag.hot{background:color-mix(in srgb,var(--hot) 18%,transparent);color:var(--bad)}
 
+/* Reply box (bin/report-reply-box adds it to every page). */
+.reply form{max-width:70ch}
+.reply label{display:block;color:var(--muted);font-size:15px;margin-bottom:8px}
+.reply textarea{display:block;width:100%;box-sizing:border-box;min-height:110px;resize:vertical;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;font:16px/1.5 var(--font)}
+.reply textarea:focus{outline:2px solid var(--accent-fill);outline-offset:1px}
+.reply .actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+.reply button{cursor:pointer;border:0;font:700 16px/1.2 var(--font);min-height:44px}
+.reply .choice{background:var(--surface);color:var(--ink);border:2px solid var(--accent-fill);border-radius:8px;padding:10px 16px}
+.reply .choice:hover{background:var(--accent-soft)}
+
 /* Tables. */
 table{width:100%;border-collapse:separate;border-spacing:0;font-size:15.5px;line-height:1.5;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;margin:20px 0}
 th,td{text-align:left;padding:12px 16px;border-bottom:1px solid var(--line);vertical-align:top}
