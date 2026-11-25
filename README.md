@@ -39,6 +39,19 @@ Settings come from the environment, never from this repo:
 | `REPORTS_PROJECT` | Cloudflare Pages project name |
 | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` | Pages-edit token; the owner's vault supplies it |
 
+## Reply
+
+Every report page ends with a reply box (the dashboard pages, `/` and `/_/`, have none): a text field, one button for each answer in
+`<meta name="report:choices" content="A|B">` (optional, at most 6), and **Send**. It is a plain form with no
+script. `bin/report` adds the box to every report page at each publish (`bin/report-reply-box`).
+
+The form posts to `/_/reply`. The reply Worker (`worker/reply.js`) saves the reply as one JSON item
+(`schema` `reports.reply.v1`, `reply_id`, `repo`, `slug`, `page_url`, `ticket`, `title`, `choice`, `text`, `sent_at`,
+`sender`) in the owner's inbox with client name `reports`, then shows a "sent" page (its link carries an HMAC of the inbox receipt, so only a saved reply shows "Reply sent"). `reply_id` is a hash of page,
+choice and text. Factory's inbox intake (in the Factory repo, not here) keys its tasks on that hash, so it opens one task for each reply and the same reply sent twice counts once. This is permanent: the same choice and text sent to the same page later (also after a republish) opens no second task; change the text to send it again. When the
+inbox does not confirm it, the page says "Not confirmed" and shows the text again. The host's access gate covers
+`/_/reply` too; the Worker refuses a post without the gate's identity header or from another site. Deploy: `bin/reply-deploy` (settings in its header, from the environment; it needs its own token with Workers Scripts and Workers Routes write, not the Pages-edit token).
+
 ## Rules for this repo
 
 Never commit a token, a key, a report, a vault path, a stored credential's name, or a private hostname/ID (tailnet or
