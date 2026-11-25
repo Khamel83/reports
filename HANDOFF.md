@@ -45,3 +45,9 @@ Checkpoint: Nov 25, 2026, 5:54 AM PT. Host and deploy path are in `INFRA.md`; th
 - A design change must be tested in a browser that already has the old stylesheet, or by the `?v=` value in the page.
 
 Open work is in `TODO.md`.
+
+## November 25 session status
+
+The combined morning analysis change merged; the earlier proposal was closed as superseded. A source merge does not by itself prove a scheduled report ran.
+
+GitHub readback November 25: [#15](https://github.com/Khamel83/reports/pull/15): closed; [#16](https://github.com/Khamel83/reports/pull/16): merged. Recheck before action.
