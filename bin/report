@@ -18,9 +18,16 @@ stamp() { find "$REPORTS_CONTENT_DIR" -name index.html -not -path '*/.git/*' -ex
 commit() { git -C "$REPORTS_CONTENT_DIR" add -A; git -C "$REPORTS_CONTENT_DIR" diff --cached --quiet || git -C "$REPORTS_CONTENT_DIR" commit -qm "$1"; }
 # Edits already in the tree are content, not layout: commit them first. Then the stylesheet and the stamp are the
 # "restyle" commit, and the new page is the "report" commit.
+# Leftovers of a killed run (only _/tokens.css and stamp edits) are layout: file them as "restyle:", not content.
+left=$(git -C "$REPORTS_CONTENT_DIR" status --porcelain | cut -c4-)
+if [ -n "$left" ] && ! git -C "$REPORTS_CONTENT_DIR" diff -U0 HEAD -- . ':(exclude)_/tokens.css' | grep -E '^[+-][^+-]' | grep -vqE 'href="/_/tokens\.css(\?v=\w+)?"' \
+   && ! printf '%s\n' "$left" | grep -vqE '(^_/tokens\.css$|/index\.html$|^index\.html$)'; then
+  commit "restyle: leftovers of an interrupted publish"
+fi
 commit "content: earlier uncommitted changes"
 # From here the tree holds only what this publish writes (stylesheet, stamps, page, dashboard), all made again by a
 # new run. A failed run resets it to the last commit, so stamps never wait to fall into a later "content" commit.
+# A killed run (SIGKILL, power loss) skips the trap; the leftover check above files those edits as "restyle:".
 reset() { git -C "$REPORTS_CONTENT_DIR" reset -q --hard HEAD; git -C "$REPORTS_CONTENT_DIR" clean -fdq; echo "publish failed: content tree reset to the last commit" >&2; }
 trap 'rc=$?; [ $rc -eq 0 ] || reset' EXIT
 cp "$here/tokens.css" "$REPORTS_CONTENT_DIR/_/tokens.css"; stamp; commit "restyle: stylesheet $v"
