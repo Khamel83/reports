@@ -165,7 +165,7 @@ class Clean(HTMLParser):
         if tag in ("script", "style", "head", "title"):
             self.skip += 1
             return
-        if tag not in ALLOWED_TAGS:
+        if self.skip or tag not in ALLOWED_TAGS:
             return
         keep = ""
         attrs = dict(attrs)
@@ -173,7 +173,7 @@ class Clean(HTMLParser):
         if classes:
             keep += f' class="{" ".join(classes)}"'
         href = attrs.get("href") or ""
-        if tag == "a" and re.match(r"(https://|/(?!/))[^\s\"'<>]*\Z", href):
+        if tag == "a" and re.match(r"(https://|/(?![/\\]))[^\s\"'<>\\]*\Z", href):
             keep += f' href="{html.escape(href)}"'
         self.out.append(f"<{tag}{keep}>")
         self.open.append(tag)
@@ -182,7 +182,7 @@ class Clean(HTMLParser):
         if tag in ("script", "style", "head", "title"):
             self.skip = max(0, self.skip - 1)
             return
-        if tag in self.open:
+        if not self.skip and tag in self.open:
             while self.open:
                 last = self.open.pop()
                 self.out.append(f"</{last}>")
