@@ -159,3 +159,19 @@ test("a streamed body over the size limit is refused without a Content-Length", 
   assert.equal(response.status, 413);
   assert.equal(calls.length, 0);
 });
+
+test("answers from decision cards are kept and written into the text", () => {
+  const data = form({ ...page, text: "Go.", q1: "Republish?", a1: "In place", n1: "keep it simple", q2: "Search?", n2: "", q3: "Thread ID?", a3: "You decide" });
+  const { value } = buildReply(data, { host: HOST, sender: "owner", now: "t", id: "x" });
+  assert.deepEqual(value.answers, [
+    { question: "Republish?", choice: "In place", note: "keep it simple" },
+    { question: "Thread ID?", choice: "You decide", note: "" },
+  ]);
+  assert.equal(value.text, "Go.\n\nDecisions:\n- Republish?: In place. keep it simple\n- Thread ID?: You decide");
+});
+
+test("an answer alone is a reply", () => {
+  const { value, error } = buildReply(form({ ...page, q1: "Republish?", a1: "In place" }), { host: HOST, sender: "o", now: "t", id: "x" });
+  assert.equal(error, undefined);
+  assert.equal(value.text, "Decisions:\n- Republish?: In place");
+});

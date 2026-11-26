@@ -63,7 +63,9 @@ next morning report.
 
 Every report page ends with a reply box (the dashboard pages, `/` and `/_/`, have none): a text field, one button for each answer in
 `<meta name="report:choices" content="A|B">` (optional, at most 6), and **Send**. It is a plain form with no
-script. `bin/report` adds the box to every report page at each publish (`bin/report-reply-box`).
+script. Each decision card (`.card.ask`) gets its own answer: one pick for each choice in its `data-choices` and a note
+field. These fields belong to the same form (HTML `form` attribute), so one **Send** sends all answers. The Worker
+keeps them as `answers` (question, choice, note) and also writes them into `text` under "Decisions:". `bin/report` adds the box to every report page at each publish (`bin/report-reply-box`).
 
 The form posts to `/_/reply`. The reply Worker (`worker/reply.js`) saves the reply as one JSON item
 (`schema` `reports.reply.v1`, `reply_id`, `repo`, `slug`, `page_url`, `ticket`, `title`, `choice`, `text`, `sent_at`,

@@ -45,6 +45,21 @@ class ReplyBox(unittest.TestCase):
         page = box.apply('<head><!-- <meta name="report:choices" content="A|B"> --></head><main></main>', "infra", "x")
         self.assertNotIn('class="choice"', page)
 
+    def test_each_decision_card_gets_its_own_answer(self):
+        src = PAGE.replace("<h1>x</h1>", '<div class="card ask" data-choices="Keep|Drop &amp; go"><h3>Keep <b>it</b>?</h3>'
+                           '<div class="cols"><p>a</p></div></div><div class="card ask"><h3>Second</h3><p>b</p></div>')
+        page = box.apply(src, "infra", "x")
+        self.assertIn('id="reply-form"', page)
+        self.assertIn('<input type="hidden" form="reply-form" name="q1" value="Keep it?">', page)
+        self.assertIn('<input type="radio" form="reply-form" name="a1" value="Drop &amp; go">', page)
+        self.assertIn('name="q2" value="Second"', page)
+        self.assertNotIn('name="a2"', page)  # no data-choices: a note only
+        self.assertIn('name="n2"', page)
+        first = page.index('name="q1"')
+        self.assertLess(page.index('<div class="cols">'), first)  # after the nested div, inside the card
+        self.assertLess(first, page.index('<div class="card ask"><h3>Second'))
+        self.assertEqual(box.apply(page, "infra", "x"), page)  # a second run changes nothing
+
     def test_no_main_no_box(self):
         self.assertEqual(box.apply("<p>x</p>", "infra", "x"), "<p>x</p>")
 
