@@ -36,6 +36,12 @@ Checkpoint: Nov 25, 2026, 5:54 AM PT. Host and deploy path are in `INFRA.md`; th
   Known effect: the first R-4 publish put the box in a "report" commit, so five older pages show Nov 24 10:00 PM PT
   on the dashboard (same day). `bin/report` now adds the box in the "restyle" commit.
 
+- R-9 idea ledger plan (Nov 25, 2026, about 7 PM PT): https://reports.khamel.com/reports/idea-ledger/. Plan only, no code.
+  It waits for the owner's button reply on the page (goes to Factory as a task). Records: PR #18.
+  Worktree note: `.worktrees/bed` is now on branch `idea-ledger-plan`; the old local branch `bed-synthesis` (PR #15,
+  closed) is still there. Cleanup after #18 merges: `git -C .worktrees/bed checkout --detach origin/main` and delete
+  both local branches.
+
 ## Recheck
 
 - Look: serve the content repo locally (`python3 -m http.server` in a copy that has `_/tokens.css`), open a page in

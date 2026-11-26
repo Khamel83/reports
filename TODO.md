@@ -18,6 +18,9 @@
       and stops after 45 minutes (details in the `bed` skill). Nov 25 (owner): the morning page must think across all bed reports, not list them;
       `bin/report-morning prompt` and `build --analysis` with one G2K request. Open: one scheduled 5 AM run that ends
       with "live:" and has the analysis.
+- [ ] R-9 Idea ledger (owner blue-sky ask, Nov 25, 2026): plan at https://reports.khamel.com/reports/idea-ledger/.
+      Waits for the owner's answer on the page ("Start stage 1"). Stage 1: publisher lint, `report:thread`, auto-links,
+      a bar-chart part; no model calls.
 - [ ] R-6 Look at light mode and at a real phone after design v2 (the owner uses dark mode; tokens only).
 
 ## Done
