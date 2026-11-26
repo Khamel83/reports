@@ -1,0 +1,86 @@
+#!/usr/bin/env python3
+"""report-replies [<repo> [<slug>]]  — print the owner's replies to report pages, newest last.
+
+Any session reads the answers to its own pages here; Factory also gets each reply as a task (README "Reply").
+The reply Worker saves each reply in the owner's inbox (Drop) with client "reports". This reads the inbox list
+from REPORTS_DROP_API (the inbox read API on the tailnet; the value is in the `report` skill, not in this repo).
+On demand only, never in a loop: a cache keeps the cursor, so a second run reads only new inbox items
+(one request per 200 new items, plus one per new reply).
+"""
+import json
+import os
+import pathlib
+import sys
+import urllib.request
+
+LIMIT = 200
+CACHE = pathlib.Path(os.environ.get("XDG_CACHE_HOME") or pathlib.Path.home() / ".cache") / "report-replies.json"
+
+
+def get(base, path):
+    req = urllib.request.Request(base + path, headers={"X-Drop-Consumer": "reports"})
+    with urllib.request.urlopen(req, timeout=20) as resp:
+        return json.loads(resp.read())
+
+
+def sync(base, state):
+    """Read new inbox items. The cursor moves only past items that were read, so a failed read is tried again."""
+    seen = {r.get("drop_id") for r in state["replies"]}
+    while True:
+        start = state["cursor"]
+        page = get(base, f"/v1/drops?after={start}&limit={LIMIT}")
+        if not isinstance(page, dict) or not isinstance(page.get("items"), list):
+            raise ValueError("inbox list has no items")
+        for item in page["items"]:
+            if item.get("client") == "reports" and not item.get("canary") and item["drop_id"] not in seen:
+                reply = get(base, "/v1/drops/" + item["drop_id"] + "/content")  # an error stops here; cursor kept
+                if isinstance(reply, dict) and reply.get("schema") == "reports.reply.v1":
+                    reply["drop_id"] = item["drop_id"]
+                    state["replies"].append(reply)
+                    seen.add(item["drop_id"])
+            state["cursor"] = int(item["sequence_id"])
+        state["cursor"] = max(state["cursor"], int(page.get("next_after") or 0))
+        if not page.get("has_more"):
+            return
+        if state["cursor"] <= start:  # the inbox says "more" but the cursor did not move: stop, do not spin
+            raise ValueError("inbox cursor did not advance")
+
+
+def load():
+    try:
+        state = json.loads(CACHE.read_text())
+        if isinstance(state, dict) and isinstance(state.get("cursor"), int) and isinstance(state.get("replies"), list):
+            return state
+    except (OSError, ValueError):
+        pass
+    return {"cursor": 0, "replies": []}  # no cache or a broken one: read the inbox again from the start
+
+
+def save(state):
+    CACHE.parent.mkdir(parents=True, exist_ok=True)
+    tmp = CACHE.with_name(CACHE.name + f".{os.getpid()}.tmp")
+    tmp.write_text(json.dumps(state))
+    os.replace(tmp, CACHE)  # a killed run never leaves a cut cache
+
+
+def main(argv):
+    base = os.environ.get("REPORTS_DROP_API", "").rstrip("/")
+    if not base:
+        sys.exit("set REPORTS_DROP_API (the `report` skill has the value)")
+    repo, slug = (argv + [None, None])[:2]
+    state = load()
+    try:
+        sync(base, state)
+    except (OSError, ValueError, KeyError, TypeError) as err:  # network or bad answer: keep what was read, say that the list is not complete
+        print(f"warning: inbox read stopped ({err}); replies below may be incomplete; run again", file=sys.stderr)
+    save(state)
+    shown = [r for r in state["replies"] if (not repo or r.get("repo") == repo) and (not slug or r.get("slug") == slug)]
+    for r in shown:
+        print(f"--- {r.get('sent_at', '?')}  {r.get('page_url', '?')}  choice: {r.get('choice') or 'none'}")
+        print(r.get("text") or "(no text)")
+    if not shown:
+        print("no replies")
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])

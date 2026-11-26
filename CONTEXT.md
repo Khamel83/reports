@@ -19,6 +19,8 @@ Deployed runtime state is not verified by this remote evidence.
 
 ## Owner decisions
 
+- Nov 25, 2026, 6:56 PM PT (reply on https://reports.khamel.com/reports/idea-ledger/): republish in place; the no-scripts rule is not strict; the agent chooses the thread ID. Each decision on a page gets its own answer buttons, not one reply box at the end. Owner, 7 PM PT: replies must reach the repo whose page it is, not only Factory (`bin/report-replies` reads them; the reply-routing change is open as R-10).
+
 - Nov 24, 2026: reports are dark first and use the band layout in `DESIGN.md` (wide bands, heavy condensed capitals,
   stat tiles, cards). The owner reads in dark mode only. The old narrow warm-paper column is retired.
 - Nov 24, 2026: everything the owner is meant to read, plans included, goes out as a report link. No relative paths.

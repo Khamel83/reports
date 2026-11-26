@@ -21,6 +21,9 @@
 - [ ] R-9 Idea ledger (owner blue-sky ask, Nov 25, 2026): plan at https://reports.khamel.com/reports/idea-ledger/.
       Waits for the owner's answer on the page ("Start stage 1"). Stage 1: publisher lint, `report:thread`, auto-links,
       a bar-chart part; no model calls.
+- [ ] R-10 Replies (owner, Nov 25, 2026): each `.card.ask` gets its own answer buttons (done in #20; a small script is allowed, CONTEXT Nov 25);
+      the reply goes to the page's repo first (its session reads it with `bin/report-replies`), Factory only when no
+      session takes it. Needs a Factory intake change; decide the hand-over rule with Factory.
 - [ ] R-6 Look at light mode and at a real phone after design v2 (the owner uses dark mode; tokens only).
 
 ## Done
