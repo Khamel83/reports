@@ -24,20 +24,38 @@ def get(base, path):
 
 
 def sync(base, state):
+    """Read new inbox items. The cursor moves only past items that were read, so a failed read is tried again."""
+    seen = {r.get("drop_id") for r in state["replies"]}
     while True:
         page = get(base, f"/v1/drops?after={state['cursor']}&limit={LIMIT}")
         for item in page["items"]:
-            if item.get("client") == "reports" and not item.get("canary"):
-                try:
-                    reply = get(base, "/v1/drops/" + item["drop_id"] + "/content")
-                except (OSError, ValueError) as err:
-                    reply = {"error": f"unreadable: {err}"}
+            if item.get("client") == "reports" and not item.get("canary") and item["drop_id"] not in seen:
+                reply = get(base, "/v1/drops/" + item["drop_id"] + "/content")  # an error stops here; cursor kept
                 if isinstance(reply, dict) and reply.get("schema") == "reports.reply.v1":
                     reply["drop_id"] = item["drop_id"]
                     state["replies"].append(reply)
-        state["cursor"] = page["next_after"]
+                    seen.add(item["drop_id"])
+            state["cursor"] = item["sequence_id"]
+        state["cursor"] = max(state["cursor"], page["next_after"])
         if not page.get("has_more"):
             return
+
+
+def load():
+    try:
+        state = json.loads(CACHE.read_text())
+        if isinstance(state, dict) and isinstance(state.get("cursor"), int) and isinstance(state.get("replies"), list):
+            return state
+    except (OSError, ValueError):
+        pass
+    return {"cursor": 0, "replies": []}  # no cache or a broken one: read the inbox again from the start
+
+
+def save(state):
+    CACHE.parent.mkdir(parents=True, exist_ok=True)
+    tmp = CACHE.with_name(CACHE.name + f".{os.getpid()}.tmp")
+    tmp.write_text(json.dumps(state))
+    os.replace(tmp, CACHE)  # a killed run never leaves a cut cache
 
 
 def main(argv):
@@ -45,10 +63,12 @@ def main(argv):
     if not base:
         sys.exit("set REPORTS_DROP_API (the `report` skill has the value)")
     repo, slug = (argv + [None, None])[:2]
-    state = json.loads(CACHE.read_text()) if CACHE.exists() else {"cursor": 0, "replies": []}
-    sync(base, state)
-    CACHE.parent.mkdir(parents=True, exist_ok=True)
-    CACHE.write_text(json.dumps(state))
+    state = load()
+    try:
+        sync(base, state)
+    except (OSError, ValueError) as err:  # network or bad answer: keep what was read, say that the list is not complete
+        print(f"warning: inbox read stopped ({err}); replies below may be incomplete; run again", file=sys.stderr)
+    save(state)
     shown = [r for r in state["replies"] if (not repo or r.get("repo") == repo) and (not slug or r.get("slug") == slug)]
     for r in shown:
         print(f"--- {r.get('sent_at', '?')}  {r.get('page_url', '?')}  choice: {r.get('choice') or 'none'}")
