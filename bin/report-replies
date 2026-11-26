@@ -27,7 +27,10 @@ def sync(base, state):
     """Read new inbox items. The cursor moves only past items that were read, so a failed read is tried again."""
     seen = {r.get("drop_id") for r in state["replies"]}
     while True:
-        page = get(base, f"/v1/drops?after={state['cursor']}&limit={LIMIT}")
+        start = state["cursor"]
+        page = get(base, f"/v1/drops?after={start}&limit={LIMIT}")
+        if not isinstance(page, dict) or not isinstance(page.get("items"), list):
+            raise ValueError("inbox list has no items")
         for item in page["items"]:
             if item.get("client") == "reports" and not item.get("canary") and item["drop_id"] not in seen:
                 reply = get(base, "/v1/drops/" + item["drop_id"] + "/content")  # an error stops here; cursor kept
@@ -35,10 +38,12 @@ def sync(base, state):
                     reply["drop_id"] = item["drop_id"]
                     state["replies"].append(reply)
                     seen.add(item["drop_id"])
-            state["cursor"] = item["sequence_id"]
-        state["cursor"] = max(state["cursor"], page["next_after"])
+            state["cursor"] = int(item["sequence_id"])
+        state["cursor"] = max(state["cursor"], int(page.get("next_after") or 0))
         if not page.get("has_more"):
             return
+        if state["cursor"] <= start:  # the inbox says "more" but the cursor did not move: stop, do not spin
+            raise ValueError("inbox cursor did not advance")
 
 
 def load():
@@ -66,7 +71,7 @@ def main(argv):
     state = load()
     try:
         sync(base, state)
-    except (OSError, ValueError) as err:  # network or bad answer: keep what was read, say that the list is not complete
+    except (OSError, ValueError, KeyError, TypeError) as err:  # network or bad answer: keep what was read, say that the list is not complete
         print(f"warning: inbox read stopped ({err}); replies below may be incomplete; run again", file=sys.stderr)
     save(state)
     shown = [r for r in state["replies"] if (not repo or r.get("repo") == repo) and (not slug or r.get("slug") == slug)]

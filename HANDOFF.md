@@ -51,7 +51,7 @@ Checkpoint: Nov 25, 2026, 5:54 AM PT. Host and deploy path are in `INFRA.md`; th
   - **Blocker (deploy of #20):** the reply Worker on the host still runs the old code. It drops the decision-card
     answers (q/a/n fields), and a reply with only a pick says "empty". Any publish now spreads the new answer fields
     (main has them), so deploy soon: `bin/reply-deploy` from `main` with the Worker token in Infra
-    (`secrets/reports-reply-worker.env.encrypted`, see Infra TODO R-4 line), `DROP_INTAKE_TOKEN` empty so the secret
+    (name and path in Infra, TODO R-4 line), `DROP_INTAKE_TOKEN` empty so the secret
     stays. This session was not allowed to decrypt it. After the deploy: publish one page, send a test reply with a
     pick on the idea-ledger page, read it with `bin/report-replies reports idea-ledger`.
   - Worktree `.worktrees/bed` is on `report-replies`. After #19 merges: `git -C .worktrees/bed checkout --detach
