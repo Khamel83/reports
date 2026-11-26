@@ -7,6 +7,9 @@ The box is a plain HTML form (no script) that posts to /_/reply, where the reply
 Each page gets one box, between the markers below, before the footer (or before </main>). A second run replaces the box, so a new
 box version reaches every page. The dashboard pages (/ and everything under /_/) get no box.
 Answer buttons come from <meta name="report:choices" content="A|B">: one button for each choice, at most 6.
+Each decision card (<div class="card ask" data-choices="A|B">) also gets its own answer: one pick for each choice
+(at most 6) and a note field, between the ASK markers. They belong to the reply form by its id (the HTML form
+attribute), so one Send at the end sends every answer, with no script. At most MAX_ASKS cards per page get one.
 """
 import html
 import subprocess
@@ -19,6 +22,10 @@ NAME = re.compile(r"[a-z0-9][a-z0-9._-]{0,63}\Z")  # the Worker's limits: a page
 SLUG = re.compile(r"[a-z0-9][a-z0-9-]{0,127}\Z")
 STAMP = re.compile(r'(href="/_/tokens\.css)\?v=\w+"')
 OLD = re.compile(re.escape(START) + r".*?" + re.escape(END) + r"\n?", re.S)
+ASK_START, ASK_END = "<!-- ask-answer -->", "<!-- /ask-answer -->"
+OLD_ASK = re.compile(re.escape(ASK_START) + r".*?" + re.escape(ASK_END), re.S)
+ASK = re.compile(r'<div class="card ask"([^>]*)>')
+MAX_ASKS = 12  # the Worker reads q1..q12
 
 
 def meta(page, name):
@@ -34,6 +41,45 @@ def cut(text, limit):
     return text
 
 
+def text_of(fragment):
+    return html.unescape(re.sub(r"<[^>]+>", "", fragment)).strip()
+
+
+def card_end(page, at):
+    """Index of the </div> that closes the <div> opened at `at` (cards may hold other divs)."""
+    depth = 0
+    for tag in re.finditer(r"<(/?)div\b[^>]*>", page[at:]):
+        depth += -1 if tag.group(1) else 1
+        if depth == 0:
+            return at + tag.start()
+    return -1
+
+
+def answers(page):
+    """Put one answer block in each decision card. The question is the card's h3."""
+    out, pos, n = [], 0, 0
+    for found in ASK.finditer(page):
+        if found.start() < pos:
+            continue
+        end = card_end(page, found.start())
+        if end < 0 or n >= MAX_ASKS:
+            break
+        n += 1
+        card = page[found.start():end]
+        head = re.search(r"<h3[^>]*>(.*?)</h3>", card, re.S)
+        question = cut(re.sub(r"\s+", " ", text_of(head.group(1))) if head else f"Decision {n}", 200)
+        given = re.search(r'data-choices="([^"]*)"', found.group(1))
+        picks = [c.strip() for c in html.unescape(given.group(1)).split("|") if c.strip()][:6] if given else []
+        radios = "".join(f'<label class="pick"><input type="radio" form="reply-form" name="a{n}" value="{html.escape(cut(c, 80))}">'
+                         f'<span>{html.escape(cut(c, 80))}</span></label>' for c in picks)
+        block = (f'{ASK_START}<div class="answer"><input type="hidden" form="reply-form" name="q{n}" value="{html.escape(question)}">'
+                 f'{radios}<input type="text" form="reply-form" name="n{n}" maxlength="500" placeholder="Note (optional)" '
+                 f'aria-label="Note on: {html.escape(question)}"></div>{ASK_END}')
+        out.append(page[pos:end] + block)
+        pos = end
+    return "".join(out) + page[pos:]
+
+
 def box(page, repo, slug):
     title = re.search(r"<title>(.*?)</title>", page, re.S)
     fields = dict(repo=repo, slug=slug, ticket=cut(meta(page, "ticket"), 64),
@@ -44,8 +90,8 @@ def box(page, repo, slug):
     buttons = "".join(f'<button class="choice" name="choice" value="{html.escape(cut(c, 80))}">{html.escape(cut(c, 80))}</button>'
                       for c in choices)
     return (f'{START}\n<section class="reply" id="reply">\n<h2>Reply</h2>\n'
-            f'<form method="post" action="/_/reply">{hidden}\n'
-            '<label for="reply-text">Your answer, decision or change. The next page says if the inbox saved it.</label>\n'
+            f'<form method="post" action="/_/reply" id="reply-form">{hidden}\n'
+            '<label for="reply-text">Anything else. Send also sends your answers in the decision cards above. The next page says if the inbox saved it.</label>\n'
             '<textarea id="reply-text" name="text" rows="4" maxlength="4000"></textarea>\n'
             f'<div class="actions">{buttons}<button class="btn" name="choice" value="">Send</button></div>\n'
             f'</form>\n</section>\n{END}\n')
@@ -55,7 +101,7 @@ def apply(page, repo, slug):
     """Return the page with exactly one current box, or the page unchanged when it has no </main>."""
     if page.rfind("</main>") < 0:
         return page
-    page = OLD.sub("", page)
+    page = answers(OLD_ASK.sub("", OLD.sub("", page)))
     end = page.rfind("</main>")
     footer = page.rfind('<footer class="meta"', 0, end)
     at = footer if footer >= 0 else end
@@ -87,7 +133,7 @@ def layout_only(root):
     """True when every uncommitted change differs from HEAD only by the box and the stylesheet stamp (a killed run)."""
     git = lambda *a: subprocess.run(["git", "-C", root, "-c", "core.quotePath=false", *a],
                                     capture_output=True, text=True, encoding="utf-8")
-    plain = lambda page: STAMP.sub(r'\1"', OLD.sub("", page))
+    plain = lambda page: STAMP.sub(r'\1"', OLD_ASK.sub("", OLD.sub("", page)))
     paths = [line[3:] for line in git("status", "--porcelain", "--untracked-files=all").stdout.splitlines()]
     for path in paths:
         if path == "_/tokens.css":

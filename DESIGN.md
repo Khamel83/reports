@@ -21,7 +21,7 @@ Sections get alternate band colours automatically. Start from `template/report.h
 | Hero | `.kicker` (repo · ticket · date), `h1`, `.lede` | The answer in one sentence |
 | Numbers | `<div class="stats"><div class="stat"><b>4</b>wait on you</div>…</div>` | 2 to 4 numbers, in the hero or a section |
 | Verdict | `<div class="card verdict"><strong>…</strong><p>…</p></div>` | The recommendation, first section |
-| Needs you | `<div class="card ask"><h3>…</h3><p>…</p></div>`, link as `<a class="btn">` | Each decision or input the owner owes |
+| Needs you | `<div class="card ask" data-choices="A\|B"><h3>…</h3><p>…</p></div>`, link as `<a class="btn">` | Each decision or input the owner owes. `bin/report` adds its own answer picks (from `data-choices`, at most 6) and a note field; the `h3` is the question |
 | Cards | `<div class="grid">` of `<div class="card"><h3>…</h3><p>…</p></div>` | Parallel items, options, findings |
 | Two columns | `<div class="cols"><div>…</div><div>…</div></div>` | Two things side by side |
 | Table | `table` with `th` row | Comparisons with 3 or more columns |

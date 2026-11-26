@@ -16,6 +16,7 @@ const ID = /^[A-Za-z0-9-]{1,80}$/;
 export const INBOX_WAIT_MS = 10000;
 const MAX_BODY = 65536;  // all fields at their limits, percent-encoded, stay under about 40 KB
 const LIMITS = { text: 4000, choice: 80, ticket: 64, title: 200 };
+const MAX_ASKS = 12;  // decision cards with an answer on one page (bin/report-reply-box)
 
 // One reply = one id: the same page, choice and text give the same id, so a double click or a retry is one reply.
 export async function replyId(repo, slug, choice, text) {
@@ -51,6 +52,21 @@ export function buildReply(form, { host, sender, now, id }) {
     const field = get(key);
     if (field.length > LIMITS[key]) return { error: `The ${key} is too long (at most ${LIMITS[key]} characters).` };
     value[key] = field;
+  }
+  // Answers from the decision cards (q<n> question, a<n> pick, n<n> note; bin/report-reply-box). They are kept as
+  // "answers" and also written into the text, so every reader of the text (Factory, bin/report-replies) sees them.
+  const answers = [];
+  for (let n = 1; n <= MAX_ASKS; n += 1) {
+    const question = get(`q${n}`).slice(0, 200);
+    const pick = get(`a${n}`).slice(0, 80);
+    const note = get(`n${n}`).slice(0, 500);
+    if (question && (pick || note)) answers.push({ question, choice: pick, note });
+  }
+  if (answers.length) {
+    const lines = answers.map((x) => `- ${x.question}: ${[x.choice, x.note].filter(Boolean).join(". ")}`);
+    value.text = [value.text, `Decisions:\n${lines.join("\n")}`].filter(Boolean).join("\n\n");
+    if (value.text.length > LIMITS.text) return { error: `The reply is too long (at most ${LIMITS.text} characters).` };
+    value.answers = answers;
   }
   if (!value.choice && !value.text) return { error: "The reply is empty. Write an answer or press a choice." };
   value.sent_at = now;
@@ -107,7 +123,7 @@ export default {
         return page(400, "No reply here", "Use the reply box at the end of a report.", "/");
       }
       const who = request.headers.get("Cf-Access-Authenticated-User-Email");
-      return page(200, "Reply sent", `The inbox saved it as ${sent}. Factory reads it on its next inbox pass; a reply with the same choice and text as an earlier one opens no new task.` +
+      return page(200, "Reply sent", `The inbox saved it as ${sent}. The session of this page reads it (bin/report-replies), and Factory gets it on its next inbox pass (about 5 minutes). The same choice and text sent again count once.` +
         (who ? ` Signed in as ${who}.` : ""),
         backPath(url.searchParams.get("back")));
     }
