@@ -42,6 +42,21 @@ Checkpoint: Nov 25, 2026, 5:54 AM PT. Host and deploy path are in `INFRA.md`; th
   closed) is still there. Cleanup after #18 merges: `git -C .worktrees/bed checkout --detach origin/main` and delete
   both local branches.
 
+- Nov 25, 2026, about 8 PM PT (idea-ledger session):
+  - Done: plan https://reports.khamel.com/reports/idea-ledger/ (owner decisions in CONTEXT). #20 (answer buttons on
+    each decision card) merged after the reviewer's PASS. Factory made DO-905 from the owner's reply 9 minutes after it
+    was sent; a comment there says this session handled it.
+  - In flight: #19 (`bin/report-replies`); the reviewer's findings are fixed in it (failed read retried, safe cache,
+    clear network error); it waits for a new review.
+  - **Blocker (deploy of #20):** the reply Worker on the host still runs the old code. It drops the decision-card
+    answers (q/a/n fields), and a reply with only a pick says "empty". Any publish now spreads the new answer fields
+    (main has them), so deploy soon: `bin/reply-deploy` from `main` with the Worker token in Infra
+    (`secrets/reports-reply-worker.env.encrypted`, see Infra TODO R-4 line), `DROP_INTAKE_TOKEN` empty so the secret
+    stays. This session was not allowed to decrypt it. After the deploy: publish one page, send a test reply with a
+    pick on the idea-ledger page, read it with `bin/report-replies reports idea-ledger`.
+  - Worktree `.worktrees/bed` is on `report-replies`. After #19 merges: `git -C .worktrees/bed checkout --detach
+    origin/main`, then delete the local branches `report-replies`, `ask-buttons`, `idea-ledger-plan`, `bed-synthesis`.
+
 ## Recheck
 
 - Look: serve the content repo locally (`python3 -m http.server` in a copy that has `_/tokens.css`), open a page in
