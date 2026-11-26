@@ -1,0 +1,61 @@
+#!/usr/bin/env python3
+"""report-replies [<repo> [<slug>]]  — print the owner's replies to report pages, newest last.
+
+Any session reads the answers to its own pages here; Factory also gets each reply as a task (README "Reply").
+The reply Worker saves each reply in the owner's inbox (Drop) with client "reports". This reads the inbox list
+from REPORTS_DROP_API (the inbox read API on the tailnet; the value is in the `report` skill, not in this repo).
+On demand only, never in a loop: a cache keeps the cursor, so a second run reads only new inbox items
+(one request per 200 new items, plus one per new reply).
+"""
+import json
+import os
+import pathlib
+import sys
+import urllib.request
+
+LIMIT = 200
+CACHE = pathlib.Path(os.environ.get("XDG_CACHE_HOME") or pathlib.Path.home() / ".cache") / "report-replies.json"
+
+
+def get(base, path):
+    req = urllib.request.Request(base + path, headers={"X-Drop-Consumer": "reports"})
+    with urllib.request.urlopen(req, timeout=20) as resp:
+        return json.loads(resp.read())
+
+
+def sync(base, state):
+    while True:
+        page = get(base, f"/v1/drops?after={state['cursor']}&limit={LIMIT}")
+        for item in page["items"]:
+            if item.get("client") == "reports" and not item.get("canary"):
+                try:
+                    reply = get(base, "/v1/drops/" + item["drop_id"] + "/content")
+                except (OSError, ValueError) as err:
+                    reply = {"error": f"unreadable: {err}"}
+                if isinstance(reply, dict) and reply.get("schema") == "reports.reply.v1":
+                    reply["drop_id"] = item["drop_id"]
+                    state["replies"].append(reply)
+        state["cursor"] = page["next_after"]
+        if not page.get("has_more"):
+            return
+
+
+def main(argv):
+    base = os.environ.get("REPORTS_DROP_API", "").rstrip("/")
+    if not base:
+        sys.exit("set REPORTS_DROP_API (the `report` skill has the value)")
+    repo, slug = (argv + [None, None])[:2]
+    state = json.loads(CACHE.read_text()) if CACHE.exists() else {"cursor": 0, "replies": []}
+    sync(base, state)
+    CACHE.parent.mkdir(parents=True, exist_ok=True)
+    CACHE.write_text(json.dumps(state))
+    shown = [r for r in state["replies"] if (not repo or r.get("repo") == repo) and (not slug or r.get("slug") == slug)]
+    for r in shown:
+        print(f"--- {r.get('sent_at', '?')}  {r.get('page_url', '?')}  choice: {r.get('choice') or 'none'}")
+        print(r.get("text") or "(no text)")
+    if not shown:
+        print("no replies")
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])
