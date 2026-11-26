@@ -46,17 +46,12 @@ Checkpoint: Nov 25, 2026, 5:54 AM PT. Host and deploy path are in `INFRA.md`; th
   - Done: plan https://reports.khamel.com/reports/idea-ledger/ (owner decisions in CONTEXT). #20 (answer buttons on
     each decision card) merged after the reviewer's PASS. Factory made DO-905 from the owner's reply 9 minutes after it
     was sent; a comment there says this session handled it.
-  - In flight: #19 (`bin/report-replies`); the reviewer's findings are fixed in it (failed read retried, safe cache,
-    clear network error); it waits for a new review.
-  - **Blocker (deploy of #20):** the reply Worker on the host still runs the old code. It drops the decision-card
-    answers (q/a/n fields), and a reply with only a pick says "empty". Any publish now spreads the new answer fields
-    (main has them), so deploy soon: `bin/reply-deploy` from `main` with the Worker token in Infra
-    (name and path in Infra, TODO R-4 line), `DROP_INTAKE_TOKEN` empty so the secret
-    stays. Agent sessions are not allowed to decrypt it (Nov 25 and Nov 26), so the owner runs the deploy;
-    inbox Worker name for `REPORTS_DROP_SERVICE`: `drop-ingress`. After the deploy: publish one page, send a test reply with a
-    pick on the idea-ledger page, read it with `bin/report-replies reports idea-ledger`.
-  - Worktree `.worktrees/bed` is on `report-replies`. After #19 merges: `git -C .worktrees/bed checkout --detach
-    origin/main`, then delete the local branches `report-replies`, `ask-buttons`, `idea-ledger-plan`, `bed-synthesis`.
+  - Nov 26, 2026 (reply fix session): #19 merged (`bin/report-replies`, tested on the live inbox: 3 replies read).
+    The owner deployed the reply Worker from main with `bin/reply-deploy` (version 0ba1c6b5, secret kept); it now
+    keeps decision-card picks. Next check: a reply with a pick on `g2k/gateway-research-review` shows in
+    `bin/report-replies g2k gateway-research-review`. Open: a pick still needs the Send button (#21 item 1).
+  - Worktree `.worktrees/bed` is detached at origin/main plus this records branch; local branches `report-replies`,
+    `ask-buttons`, `idea-ledger-plan`, `bed-synthesis` can be deleted.
 
 ## Recheck
 
