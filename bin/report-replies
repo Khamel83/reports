@@ -4,16 +4,22 @@
 Any session reads the answers to its own pages here; Factory also gets each reply as a task (README "Reply").
 The reply Worker saves each reply in the owner's inbox (Drop) with client "reports". This reads the inbox list
 from REPORTS_DROP_API (the inbox read API on the tailnet; the value is in the `report` skill, not in this repo).
-On demand only, never in a loop: a cache keeps the cursor, so a second run reads only new inbox items
+On demand: a cache keeps the cursor, so a second run reads only new inbox items
 (one request per 200 new items, plus one per new reply).
+
+report-replies --wait <repo> <slug>  — after publishing a page with a .card.ask, wait for its answer: one inbox
+list request a minute (at most 120 per wait, ~60/hour), exit 0 on the first new reply, exit 1 after 2 hours.
 """
 import json
 import os
 import pathlib
 import sys
+import time
 import urllib.request
 
 LIMIT = 200
+WAIT_EVERY = 60
+WAIT_LIMIT = 2 * 60 * 60
 CACHE = pathlib.Path(os.environ.get("XDG_CACHE_HOME") or pathlib.Path.home() / ".cache") / "report-replies.json"
 
 
@@ -63,10 +69,46 @@ def save(state):
     os.replace(tmp, CACHE)  # a killed run never leaves a cut cache
 
 
+def show(r):
+    print(f"--- {r.get('sent_at', '?')}  {r.get('page_url', '?')}  choice: {r.get('choice') or 'none'}")
+    print(r.get("text") or "(no text)")
+
+
+def wait(base, repo, slug, every=WAIT_EVERY, limit=WAIT_LIMIT, sleep=time.sleep, clock=time.monotonic):
+    """Poll once a minute; print the first new reply to <repo>/<slug> and return 0, or return 1 after the limit."""
+    match = lambda r: r.get("repo") == repo and r.get("slug") == slug
+    state = load()
+    try:
+        sync(base, state)
+    except (OSError, ValueError, KeyError, TypeError) as err:
+        print(f"warning: inbox read failed ({err}); retrying", file=sys.stderr)
+    save(state)
+    known = {r.get("drop_id") for r in state["replies"] if match(r)}
+    end = clock() + limit
+    while clock() < end:
+        sleep(every)
+        try:
+            sync(base, state)
+        except (OSError, ValueError, KeyError, TypeError) as err:
+            print(f"warning: inbox read failed ({err}); retrying", file=sys.stderr)
+        save(state)
+        new = [r for r in state["replies"] if match(r) and r.get("drop_id") not in known]
+        if new:
+            for r in new:
+                show(r)
+            return 0
+    print(f"no reply to {repo}/{slug} after {limit // 60} minutes", file=sys.stderr)
+    return 1
+
+
 def main(argv):
     base = os.environ.get("REPORTS_DROP_API", "").rstrip("/")
     if not base:
         sys.exit("set REPORTS_DROP_API (the `report` skill has the value)")
+    if argv[:1] == ["--wait"]:
+        if len(argv) != 3:
+            sys.exit("usage: report-replies --wait <repo> <slug>")
+        sys.exit(wait(base, argv[1], argv[2]))
     repo, slug = (argv + [None, None])[:2]
     state = load()
     try:
@@ -76,8 +118,7 @@ def main(argv):
     save(state)
     shown = [r for r in state["replies"] if (not repo or r.get("repo") == repo) and (not slug or r.get("slug") == slug)]
     for r in shown:
-        print(f"--- {r.get('sent_at', '?')}  {r.get('page_url', '?')}  choice: {r.get('choice') or 'none'}")
-        print(r.get("text") or "(no text)")
+        show(r)
     if not shown:
         print("no replies")
 
